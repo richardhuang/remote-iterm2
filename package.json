@@ -1,6 +1,6 @@
 {
   "name": "remote-iterm",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Control iTerm2 from your phone over local network",
   "bin": {
     "remote-iterm": "iterm-server"
@@ -24,9 +24,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mammadovziya/remote-iterm.git"
+    "url": "git+https://github.com/richardhuang/remote-iterm2.git"
   },
-  "homepage": "https://github.com/mammadovziya/remote-iterm#readme",
+  "homepage": "https://github.com/richardhuang/remote-iterm2#readme",
   "os": [
     "darwin"
   ],
@@ -39,7 +39,6 @@
     "client/",
     "!server/node_modules",
     "!client/node_modules",
-    "!client/dist",
     "README.md"
   ]
 }
