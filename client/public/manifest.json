@@ -1,6 +1,6 @@
 {
-  "name": "Remote iTerm",
-  "short_name": "iTerm",
+  "name": "Remote iTerm2",
+  "short_name": "iTerm2",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",

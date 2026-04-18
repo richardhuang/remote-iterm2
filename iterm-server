@@ -1,5 +1,5 @@
 #!/bin/bash
-# Remote iTerm — server (7291) with built-in static client
+# Remote iTerm2 — server (7291) with built-in static client
 
 SOURCE="$0"
 while [ -L "$SOURCE" ]; do
@@ -34,7 +34,7 @@ do_start() {
       var lines = qr.split('\n').filter(Boolean);
       var info = [
         '',
-        '  Remote iTerm',
+        '  Remote iTerm2',
         '',
         '  Local:    http://localhost:7291',
         '  Network:  $URL',
@@ -71,5 +71,5 @@ case "${1:-start}" in
   start)   do_start ;;
   stop)    do_stop ;;
   restart) do_stop; sleep 1; do_start ;;
-  *)       echo "Usage: iterm-server [start|stop|restart]" ;;
+  *)       echo "Usage: remote-iterm2 [start|stop|restart]" ;;
 esac
