@@ -13,9 +13,9 @@ npm install -g remote-iterm2
 ## Usage
 
 ```bash
-remote-iterm          # start
-remote-iterm stop     # stop
-remote-iterm restart  # restart
+remote-iterm2          # start
+remote-iterm2 stop     # stop
+remote-iterm2 restart  # restart
 ```
 
 Open the printed URL on your phone (same Wi-Fi network).

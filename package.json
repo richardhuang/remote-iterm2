@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "description": "Control iTerm2 from your phone over local network",
   "bin": {
-    "remote-iterm": "iterm-server"
+    "remote-iterm2": "iterm-server"
   },
   "scripts": {
     "postinstall": "cd server && npm install && cd ../client && npm install",
