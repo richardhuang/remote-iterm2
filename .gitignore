@@ -5,3 +5,4 @@ dist/
 .iterm-server.log
 *.log
 bun.lock
+.npmrc
