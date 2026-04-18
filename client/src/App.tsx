@@ -19,9 +19,11 @@ const ACCENT = '#10b981';
 const BROADCAST_COLOR = '#818cf8';
 const GLOW = 'rgba(16,185,129,0.25)';
 
-const SOCKET_URL = window.location.hostname === 'localhost'
-  ? 'http://localhost:7291'
-  : `http://${window.location.hostname}:7291`;
+const SOCKET_URL = window.location.port === '7291'
+  ? `${window.location.protocol}//${window.location.host}`
+  : window.location.hostname === 'localhost'
+    ? 'http://localhost:7291'
+    : `http://${window.location.hostname}:7291`;
 
 const HISTORY_KEY = 'iterm-cmd-history';
 const MAX_HISTORY = 100;
@@ -996,6 +998,7 @@ export default function App() {
 
       {/* ── Quick Actions ── */}
       <div className={`flex items-center gap-1.5 bg-zinc-950/60 border-t border-zinc-800/40 flex-shrink-0 overflow-x-auto no-scrollbar ${isLandscape ? 'px-2 py-1' : 'px-3 py-2'}`}>
+        <QuickBtn icon={<CornerDownLeft className="w-3.5 h-3.5" />} onClick={() => sendSpecialKey('\\n')} color="#34d399" />
         <QuickBtn label="ESC" onClick={() => sendSpecialKey('\\x1b')} color="#f87171" />
         <QuickBtn label="^C" onClick={() => sendSpecialKey('\\x03')} color="#f87171" />
         <QuickBtn label="^D" onClick={() => sendSpecialKey('\\x04')} color="#fbbf24" />
@@ -1005,7 +1008,6 @@ export default function App() {
         <QuickBtn icon={<ChevronUp className="w-3.5 h-3.5" />} onClick={() => sendSpecialKey('\\x1b[A')} color="#a78bfa" />
         <QuickBtn icon={<ChevronDown className="w-3.5 h-3.5" />} onClick={() => sendSpecialKey('\\x1b[B')} color="#a78bfa" />
         <QuickBtn label="TAB" onClick={() => sendSpecialKey('\\t')} color="#818cf8" />
-        <QuickBtn icon={<CornerDownLeft className="w-3.5 h-3.5" />} onClick={() => sendSpecialKey('\\n')} color="#34d399" />
         <div className="w-px h-5 bg-zinc-800 mx-1 flex-shrink-0" />
         <QuickBtn icon={<Clipboard className="w-3.5 h-3.5" />} onClick={handlePaste} color="#38bdf8" />
         <QuickBtn icon={<Copy className="w-3.5 h-3.5" />} onClick={handleCopy} color="#71717a" />
@@ -1028,7 +1030,8 @@ export default function App() {
             >
               <Keyboard className="w-4 h-4" />
             </button>
-            <div
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleSend(); }}
               className="flex-1 flex items-center gap-2 bg-zinc-900/60 border rounded-2xl pl-4 pr-1.5 py-1 transition-colors"
               style={{ borderColor: broadcastMode ? BROADCAST_COLOR + '50' : command.trim() ? ACCENT + '50' : '#27272a' }}
             >
@@ -1042,7 +1045,7 @@ export default function App() {
                 value={command}
                 onChange={(e) => { setCommand(e.target.value); historyIdxRef.current = -1; }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSend();
+                  if (e.key === 'Enter') { e.preventDefault(); handleSend(); }
                   else if (e.key === 'ArrowUp') { e.preventDefault(); handleHistoryNav('up'); }
                   else if (e.key === 'ArrowDown') { e.preventDefault(); handleHistoryNav('down'); }
                 }}
@@ -1063,7 +1066,7 @@ export default function App() {
               >
                 <Send className="w-4 h-4" />
               </button>
-            </div>
+            </form>
           </div>
         )}
       </div>

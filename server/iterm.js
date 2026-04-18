@@ -2,7 +2,7 @@ const { exec } = require('child_process');
 
 const runAppleScript = (script) => {
     return new Promise((resolve, reject) => {
-        exec(`osascript -e '${script.replace(/'/g, "'\\''")}'`, (error, stdout, stderr) => {
+        exec(`/usr/bin/osascript -e '${script.replace(/'/g, "'\\''")}'`, (error, stdout, stderr) => {
             if (error) {
                 reject(error);
                 return;
@@ -241,24 +241,117 @@ const iterm = {
 
     // Send raw text/escape sequences to a session (for Ctrl+C, arrow keys, etc.)
     sendKeys: async (sessionId, keys) => {
-        const target = (sessionId && sessionId !== 'undefined')
-            ? `
-                repeat with w in windows
-                    repeat with t in tabs of w
-                        repeat with s in sessions of t
-                            if ((id of s) as string) is "${sessionId}" then
-                                tell s to write text "${keys}" newline NO
-                                return
-                            end if
-                        end repeat
-                    end repeat
-                end repeat
-                tell current session of current window to write text "${keys}" newline NO
-            `
-            : `tell current session of current window to write text "${keys}" newline NO`;
+        // Convert keys string to an AppleScript expression with proper character codes
+        // Control chars are sent via iTerm's write text using character id N
+        const parts = [];
+        let printable = '';
 
-        const script = `tell application "iTerm"\n${target}\nend tell`;
-        return runAppleScript(script);
+        const flushPrintable = () => {
+            if (printable) {
+                parts.push('"' + printable.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"');
+                printable = '';
+            }
+        };
+
+        for (let i = 0; i < keys.length; i++) {
+            // Check for \xHH escape sequences first
+            if (keys[i] === '\\' && i + 1 < keys.length) {
+                if (keys[i + 1] === 'x' && i + 3 < keys.length) {
+                    const hex = keys.substring(i + 2, i + 4);
+                    const code = parseInt(hex, 16);
+                    if (!isNaN(code)) {
+                        flushPrintable();
+                        if (code === 10 || code === 13) {
+                            // Enter: use newline YES
+                            parts.push('NL');
+                        } else {
+                            parts.push('CID:' + code);
+                        }
+                        i += 3;
+                        continue;
+                    }
+                }
+                if (keys[i + 1] === 'n') {
+                    flushPrintable();
+                    parts.push('NL');
+                    i += 1;
+                    continue;
+                }
+                if (keys[i + 1] === 't') {
+                    flushPrintable();
+                    parts.push('CID:9');
+                    i += 1;
+                    continue;
+                }
+                if (keys[i + 1] === 'r') {
+                    flushPrintable();
+                    parts.push('NL');
+                    i += 1;
+                    continue;
+                }
+            }
+
+            const code = keys.charCodeAt(i);
+            if (code < 32 || code === 127) {
+                flushPrintable();
+                if (code === 10 || code === 13) {
+                    parts.push('NL');
+                } else {
+                    parts.push('CID:' + code);
+                }
+            } else {
+                printable += keys[i];
+            }
+        }
+        flushPrintable();
+
+        if (parts.length === 0) return;
+
+        // Build AppleScript: send each part sequentially
+        const buildSendStatements = (sessionTarget) => {
+            return parts.map(p => {
+                if (p === 'NL') {
+                    return `tell ${sessionTarget} to write text ""`;
+                } else if (p.startsWith('CID:')) {
+                    const charId = p.substring(4);
+                    return `tell ${sessionTarget} to write text (character id ${charId}) newline NO`;
+                } else {
+                    return `tell ${sessionTarget} to write text ${p} newline NO`;
+                }
+            }).join('\n');
+        };
+
+        let sessionTarget;
+        if (sessionId && sessionId !== 'undefined') {
+            sessionTarget = 's';
+            const script = `
+                tell application "iTerm"
+                    try
+                        repeat with w in windows
+                            repeat with t in tabs of w
+                                repeat with s in sessions of t
+                                    if ((id of s) as string) is "${sessionId}" then
+                                        ${buildSendStatements('s')}
+                                        return
+                                    end if
+                                end repeat
+                            end repeat
+                        end repeat
+                    on error
+                    end try
+                    ${buildSendStatements('current session of current window')}
+                end tell
+            `;
+            return runAppleScript(script);
+        } else {
+            sessionTarget = 'current session of current window';
+            const script = `
+                tell application "iTerm"
+                    ${buildSendStatements(sessionTarget)}
+                end tell
+            `;
+            return runAppleScript(script);
+        }
     },
 
     getScreenSize: async () => {

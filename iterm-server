@@ -1,14 +1,13 @@
 #!/bin/bash
-# Remote iTerm — server (7291) + client dev (7292)
+# Remote iTerm — server (7291) with built-in static client
 
 SOURCE="$0"
-while [ -L "$SOURCE" ]; do SOURCE="$(readlink "$SOURCE")"; done
+while [ -L "$SOURCE" ]; do
+  LINK_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$LINK_DIR/$SOURCE"
+done
 DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
-
-# Handle global installation: if we're in node_modules/.bin, go up to the package root
-if [[ "$DIR" == *"node_modules"* ]]; then
-  DIR="$(cd "$DIR/../../remote-iterm" && pwd)"
-fi
 
 PIDFILE="$DIR/.iterm-server.pid"
 LOGFILE="$DIR/.iterm-server.log"
@@ -23,24 +22,21 @@ do_start() {
     return 1
   fi
 
-  cd "$DIR/server" && node index.js >> "$LOGFILE" 2>&1 &
+  cd "$DIR/server" && /opt/homebrew/bin/node index.js >> "$LOGFILE" 2>&1 &
   SERVER_PID=$!
 
-  cd "$DIR/client" && npx vite --host --port 7292 >> "$LOGFILE" 2>&1 &
-  CLIENT_PID=$!
-
-  echo "$SERVER_PID $CLIENT_PID" > "$PIDFILE"
+  echo "$SERVER_PID" > "$PIDFILE"
 
   IP=$(get_local_ip)
-  URL="http://${IP}:7292"
-  node -e "
+  URL="http://${IP}:7291"
+  /opt/homebrew/bin/node -e "
     require('$DIR/server/node_modules/qrcode-terminal').generate('$URL', {small: true}, function(qr) {
       var lines = qr.split('\n').filter(Boolean);
       var info = [
         '',
         '  Remote iTerm',
         '',
-        '  Local:    http://localhost:7292',
+        '  Local:    http://localhost:7291',
         '  Network:  $URL',
         '',
         '  Scan QR from your phone',

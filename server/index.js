@@ -1,11 +1,20 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const iterm = require('./iterm');
 
 const app = express();
 app.use(cors());
+
+// Serve built static files from client/dist
+const distPath = path.resolve(__dirname, '../client/dist');
+app.use(express.static(distPath));
+// SPA fallback: serve index.html for all non-file routes
+app.get('{*path}', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {
