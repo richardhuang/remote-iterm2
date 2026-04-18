@@ -58,9 +58,9 @@ Open the printed URL on your phone (same Wi-Fi network).
 ```bash
 git clone https://github.com/richardhuang/remote-iterm2.git
 cd remote-iterm2
-cd server && npm install && cd ../client && npm install
-cd client && npx vite build && cd ..
-./iterm-server
+npm install
+cd client && npx vite build
+remote-iterm2
 ```
 
 ## Ports

@@ -9,8 +9,8 @@ while [ -L "$SOURCE" ]; do
 done
 DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
 
-PIDFILE="$DIR/.iterm-server.pid"
-LOGFILE="$DIR/.iterm-server.log"
+PIDFILE="$DIR/.remote-iterm2.pid"
+LOGFILE="$DIR/.remote-iterm2.log"
 
 get_local_ip() {
   ipconfig getifaddr en0 2>/dev/null || echo "localhost"

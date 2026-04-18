@@ -1,8 +1,8 @@
 node_modules/
 dist/
 .DS_Store
-.iterm-server.pid
-.iterm-server.log
+.remote-iterm2.pid
+.remote-iterm2.log
 *.log
 bun.lock
 .npmrc
