@@ -573,7 +573,7 @@ export default function App() {
               <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-400 animate-ping opacity-25" />
             )}
           </div>
-          <span className="text-[11px] font-bold tracking-[0.2em] text-zinc-500">iTERM</span>
+          <span className="text-[11px] font-bold tracking-[0.2em] text-zinc-500">iTerm2</span>
           {connected && latency !== null && (
             <span
               className="text-[10px] font-bold tabular-nums"
