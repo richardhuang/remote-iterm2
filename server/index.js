@@ -36,6 +36,16 @@ let clients = new Set();
 let activeSessionId = null;
 let cachedScreenSize = null;
 
+// Colors assigned per window index — written to Mac iTerm tab on focus
+const TAB_COLORS = [
+    { r: 16, g: 185, b: 129 },   // emerald
+    { r: 59, g: 130, b: 246 },   // blue
+    { r: 245, g: 158, b: 11 },   // amber
+    { r: 168, g: 85, b: 247 },   // purple
+    { r: 244, g: 63, b: 94 },    // rose
+    { r: 6, g: 182, b: 212 },    // cyan
+];
+
 // Fetch screen size once at startup
 (async () => {
     cachedScreenSize = await iterm.getScreenSize();
@@ -169,7 +179,19 @@ io.on('connection', (socket) => {
         try {
             await iterm.focus(windowId, tabIndex);
             setTimeout(async () => {
-                await Promise.all([syncState(), streamContent()]);
+                const state = await syncState();
+                if (state) {
+                    const winIdx = state.findIndex(w => w.id === String(windowId));
+                    if (winIdx >= 0) {
+                        const win = state[winIdx];
+                        const tab = win.tabs.find(t => t.index === tabIndex) || win.tabs.find(t => t.isSelected);
+                        const sessionId = tab?.sessions[0]?.id;
+                        if (sessionId) {
+                            const color = TAB_COLORS[winIdx % TAB_COLORS.length];
+                            await iterm.setTabColor(sessionId, color.r, color.g, color.b);
+                        }
+                    }
+                }
             }, 150);
         } catch (err) {
             console.error('Focus error:', err);

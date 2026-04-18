@@ -1,15 +1,15 @@
 {
   "name": "remote-iterm2",
-  "version": "1.2.3",
+  "version": "1.2.2",
   "description": "Control iTerm2 from your phone over local network",
   "bin": {
-    "remote-iterm2": "remote-iterm2"
+    "remote-iterm2": "iterm-server"
   },
   "scripts": {
     "postinstall": "cd server && npm install && cd ../client && npm install",
-    "start": "./remote-iterm2 start",
-    "stop": "./remote-iterm2 stop",
-    "restart": "./remote-iterm2 restart"
+    "start": "./iterm-server start",
+    "stop": "./iterm-server stop",
+    "restart": "./iterm-server restart"
   },
   "keywords": [
     "iterm",
@@ -34,7 +34,7 @@
     "node": ">=18"
   },
   "files": [
-    "remote-iterm2",
+    "iterm-server",
     "server/",
     "client/",
     "!server/node_modules",

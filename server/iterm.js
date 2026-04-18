@@ -215,6 +215,30 @@ const iterm = {
         return runAppleScript(script);
     },
 
+    // Set iTerm tab color via escape sequences written to session TTY
+    setTabColor: async (sessionId, r, g, b) => {
+        if (!sessionId || sessionId === 'undefined') return;
+        const script = `
+            tell application "iTerm"
+                try
+                    repeat with w in windows
+                        repeat with t in tabs of w
+                            repeat with s in sessions of t
+                                if ((id of s) as string) is "${sessionId}" then
+                                    set ttyPath to tty of s
+                                    do shell script "printf '\\\\033]6;1;bg;red;brightness;${r}\\\\007\\\\033]6;1;bg;green;brightness;${g}\\\\007\\\\033]6;1;bg;blue;brightness;${b}\\\\007' > " & ttyPath
+                                    return
+                                end if
+                            end repeat
+                        end repeat
+                    end repeat
+                on error
+                end try
+            end tell
+        `;
+        return runAppleScript(script);
+    },
+
     // Send raw text/escape sequences to a session (for Ctrl+C, arrow keys, etc.)
     sendKeys: async (sessionId, keys) => {
         // Convert keys string to an AppleScript expression with proper character codes
