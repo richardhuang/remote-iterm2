@@ -1,6 +1,6 @@
 {
   "name": "remote-iterm2",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Control iTerm2 from your phone over local network",
   "bin": {
     "remote-iterm2": "iterm-server"
