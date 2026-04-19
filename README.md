@@ -20,6 +20,18 @@ remote-iterm2 restart  # restart
 
 Open the printed URL on your phone (same Wi-Fi network).
 
+## Configuration
+
+Create `~/.remote-iterm2.json` to customize behavior:
+
+```json
+{ "tabColor": false }
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `tabColor` | `true` | Automatically set tab background color when focusing a window. Set to `false` to preserve manually set tab colors. |
+
 ## What's Changed (v1.1.0)
 
 - **Mobile Safari white screen fix** — Built frontend as static files served by Express on a single port, eliminating the socket.io-client ESM incompatibility with Vite dev server

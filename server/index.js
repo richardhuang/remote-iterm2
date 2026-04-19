@@ -1,9 +1,23 @@
 const express = require('express');
 const http = require('http');
+const fs = require('fs');
 const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const iterm = require('./iterm');
+
+// Load user config from ~/.remote-iterm2.json
+function loadConfig() {
+    try {
+        const configPath = path.join(process.env.HOME, '.remote-iterm2.json');
+        const raw = fs.readFileSync(configPath, 'utf8');
+        return JSON.parse(raw);
+    } catch {
+        return {};
+    }
+}
+const config = loadConfig();
+const TAB_COLOR_ENABLED = config.tabColor !== false;
 
 const app = express();
 app.use(cors());
@@ -186,7 +200,7 @@ io.on('connection', (socket) => {
                         const win = state[winIdx];
                         const tab = win.tabs.find(t => t.index === tabIndex) || win.tabs.find(t => t.isSelected);
                         const sessionId = tab?.sessions[0]?.id;
-                        if (sessionId) {
+                        if (sessionId && TAB_COLOR_ENABLED) {
                             const color = TAB_COLORS[winIdx % TAB_COLORS.length];
                             await iterm.setTabColor(sessionId, color.r, color.g, color.b);
                         }
