@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>remote-iterm2 — 用户手册</title>
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════════════════════════ */
+    :root {
+      --bg:         #0a0a0a;
+      --surface:    #111111;
+      --surface2:   #1a1a1a;
+      --surface3:   #222222;
+      --border:     #27272a;
+      --green:      #10b981;
+      --green-dim:  #10b98133;
+      --blue:       #38bdf8;
+      --blue-dim:   #38bdf833;
+      --purple:     #818cf8;
+      --purple-dim: #818cf833;
+      --yellow:     #fbbf24;
+      --red:        #f87171;
+      --zinc-100:   #e4e4e7;
+      --zinc-300:   #d4d4d8;
+      --zinc-400:   #a1a1aa;
+      --zinc-500:   #71717a;
+      --zinc-600:   #52525b;
+      --font-sans:  -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      --font-mono:  "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
+      --sidebar-w:  240px;
+      --top-h:      56px;
+      --radius:     10px;
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; font-size: 15px; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--zinc-300);
+      line-height: 1.7;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--green); text-decoration: none; transition: color var(--transition); }
+    a:hover { color: #34d399; }
+    ::selection { background: var(--green); color: var(--bg); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--zinc-600); }
+
+    /* ═══════════════════════════════════════════════════════════
+       TOP NAVIGATION BAR
+    ═══════════════════════════════════════════════════════════ */
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--top-h);
+      background: rgba(10, 10, 10, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 100;
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .topbar-logo {
+      width: 32px; height: 32px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .topbar-logo-text {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--zinc-100);
+      letter-spacing: -0.01em;
+    }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Language Switcher */
+    .lang-switch {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .lang-btn {
+      padding: 5px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--zinc-500);
+      cursor: pointer;
+      transition: all var(--transition);
+      border: none;
+      background: transparent;
+      font-family: var(--font-sans);
+      letter-spacing: 0.02em;
+    }
+    .lang-btn:hover { color: var(--zinc-200); }
+    .lang-btn.active {
+      background: var(--green);
+      color: var(--bg);
+      font-weight: 600;
+    }
+
+    /* Theme pill */
+    .theme-pill {
+      font-size: 12px;
+      color: var(--zinc-500);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-family: var(--font-mono);
+    }
+
+    /* Mobile menu */
+    .mobile-menu-btn {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--zinc-300);
+      padding: 6px 10px;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .mobile-menu-btn:hover { background: var(--surface3); }
+
+    /* ═══════════════════════════════════════════════════════════
+       LAYOUT
+    ═══════════════════════════════════════════════════════════ */
+    .layout {
+      display: flex;
+      margin-top: var(--top-h);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       SIDEBAR
+    ═══════════════════════════════════════════════════════════ */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-height: calc(100vh - var(--top-h));
+      position: sticky;
+      top: var(--top-h);
+      height: calc(100vh - var(--top-h));
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+      padding: 24px 0 40px;
+    }
+    .sidebar-section {
+      margin-bottom: 24px;
+    }
+    .sidebar-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--zinc-600);
+      padding: 0 20px 8px;
+    }
+    .sidebar-nav {
+      list-style: none;
+    }
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      font-size: 13.5px;
+      color: var(--zinc-400);
+      transition: all var(--transition);
+      cursor: pointer;
+      border-left: 2px solid transparent;
+    }
+    .sidebar-link:hover {
+      color: var(--zinc-100);
+      background: var(--surface2);
+    }
+    .sidebar-link.active {
+      color: var(--green);
+      background: var(--green-dim);
+      border-left-color: var(--green);
+    }
+    .sidebar-link .num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--zinc-600);
+      min-width: 18px;
+    }
+    .sidebar-link.active .num { color: var(--green); opacity: 0.7; }
+
+    /* ═══════════════════════════════════════════════════════════
+       MAIN CONTENT
+    ═══════════════════════════════════════════════════════════ */
+    .main {
+      flex: 1;
+      min-width: 0;
+      padding: 48px 64px 80px;
+      max-width: 860px;
+    }
+
+    /* Hero */
+    .hero {
+      margin-bottom: 64px;
+      padding-bottom: 48px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, var(--green-dim) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-dim);
+      border: 1px solid var(--green);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--green);
+      margin-bottom: 20px;
+      font-family: var(--font-mono);
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .hero h1 {
+      font-size: 42px;
+      font-weight: 800;
+      color: #f5f5f5;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+    }
+    .hero-sub {
+      font-size: 16px;
+      color: var(--zinc-400);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+    .hero-terminal {
+      margin-top: 32px;
+      background: #0d0d0d;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      max-width: 480px;
+    }
+    .hero-terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .hero-dot-red   { background: #ff5f57; }
+    .hero-dot-yellow { background: #febc2e; }
+    .hero-dot-green  { background: #28c840; }
+    .hero-terminal-body {
+      padding: 16px 18px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    .hero-terminal-body .line { display: block; }
+    .c-green  { color: var(--green); }
+    .c-blue   { color: var(--blue); }
+    .c-purple { color: var(--purple); }
+    .c-yellow { color: var(--yellow); }
+    .c-zinc   { color: var(--zinc-400); }
+
+    /* ═══════════════════════════════════════════════════════════
+       SECTION HEADINGS
+    ═══════════════════════════════════════════════════════════ */
+    .section { margin-bottom: 56px; }
+    .section-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--green);
+      margin-bottom: 6px;
+      opacity: 0.7;
+    }
+    .section h2 {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--zinc-100);
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--zinc-200);
+      margin: 28px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section h3 .tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+    .section p {
+      color: var(--zinc-300);
+      margin-bottom: 12px;
+      line-height: 1.8;
+    }
+    .section ul, .section ol {
+      margin: 8px 0 12px 20px;
+      color: var(--zinc-300);
+    }
+    .section li { margin-bottom: 6px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       TABLES
+    ═══════════════════════════════════════════════════════════ */
+    .table-wrap { overflow-x: auto; margin: 16px 0; border-radius: var(--radius); border: 1px solid var(--border); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    thead tr { background: var(--surface2); }
+    th {
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--green);
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--zinc-300);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+    tbody tr:hover { background: var(--green-dim); }
+    td:first-child, th:first-child { border-left: none; }
+    td code, td .mono {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+    }
+    .c-green-bg  { background: var(--green-dim); color: var(--green); padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; }
+    .c-blue-bg   { background: var(--blue-dim);  color: var(--blue);  padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; }
+    .c-purple-bg { background: var(--purple-dim);color: var(--purple);padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; }
+    .c-yellow-bg { background: rgba(251,191,36,.15); color: var(--yellow); padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; }
+    .c-red-bg    { background: rgba(248,113,113,.15);color: var(--red);   padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       CODE BLOCKS
+    ═══════════════════════════════════════════════════════════ */
+    .code-block {
+      background: #0d0d0d;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 12px 0;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--zinc-300);
+    }
+    .code-block .comment { color: var(--zinc-600); }
+    .code-block .key     { color: var(--purple); }
+    .code-block .str     { color: var(--green); }
+    .code-block .cmd     { color: var(--blue); }
+
+    /* ═══════════════════════════════════════════════════════════
+       CALLOUT / NOTE
+    ═══════════════════════════════════════════════════════════ */
+    .callout {
+      display: flex;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      margin: 14px 0;
+      font-size: 13.5px;
+      line-height: 1.7;
+    }
+    .callout-info    { background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.2); color: var(--blue); }
+    .callout-warning { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.2); color: var(--yellow); }
+    .callout-danger  { background: rgba(248,113,113,.08);border: 1px solid rgba(248,113,113,.2);color: var(--red); }
+    .callout-icon { flex-shrink: 0; margin-top: 2px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       COLOR SWATCH
+    ═══════════════════════════════════════════════════════════ */
+    .color-swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .swatch {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .swatch-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       LAYOUT DIAGRAM
+    ═══════════════════════════════════════════════════════════ */
+    .layout-diagram {
+      background: #0d0d0d;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin: 16px 0;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      line-height: 1.7;
+      color: var(--zinc-400);
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .layout-diagram .lbl { color: var(--green); }
+    .layout-diagram .lbl2 { color: var(--blue); }
+
+    /* ═══════════════════════════════════════════════════════════
+       FAQ
+    ═══════════════════════════════════════════════════════════ */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: border-color var(--transition);
+    }
+    .faq-item:hover { border-color: var(--zinc-600); }
+    .faq-q {
+      padding: 14px 18px;
+      font-weight: 600;
+      color: var(--yellow);
+      cursor: default;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+    }
+    .faq-a {
+      padding: 14px 18px;
+      color: var(--zinc-300);
+      font-size: 14px;
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════════════════════ */
+    .footer {
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--zinc-600);
+      font-size: 12px;
+      font-family: var(--font-mono);
+    }
+    .footer a { color: var(--zinc-600); }
+    .footer a:hover { color: var(--green); }
+
+    /* ═══════════════════════════════════════════════════════════
+       LANG OVERRIDES — English
+    ═══════════════════════════════════════════════════════════ */
+    [lang="en"] .hero h1 { font-size: 38px; }
+    [lang="en"] .section h2 { font-size: 24px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════════════════════ */
+    @media (max-width: 900px) {
+      .sidebar {
+        position: fixed;
+        left: -260px;
+        top: var(--top-h);
+        height: calc(100vh - var(--top-h));
+        z-index: 90;
+        transition: left 0.3s ease;
+        width: 260px;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+      }
+      .sidebar.open { left: 0; }
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        top: var(--top-h);
+        background: rgba(0,0,0,0.6);
+        z-index: 89;
+      }
+      .sidebar-overlay.show { display: block; }
+      .mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
+      .main { padding: 32px 24px 60px; }
+      .hero h1 { font-size: 32px; }
+      .hero-terminal { max-width: 100%; }
+    }
+    @media (max-width: 600px) {
+      .main { padding: 24px 16px 48px; }
+      .hero h1 { font-size: 26px; }
+      .section h2 { font-size: 20px; }
+      .topbar { padding: 0 16px; }
+      .topbar-title { display: none; }
+      .theme-pill { display: none; }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ANIMATIONS
+    ═══════════════════════════════════════════════════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .section { animation: fadeUp 0.5s ease both; }
+    .section:nth-child(2) { animation-delay: 0.05s; }
+    .section:nth-child(3) { animation-delay: 0.10s; }
+    .section:nth-child(4) { animation-delay: 0.15s; }
+    .section:nth-child(5) { animation-delay: 0.20s; }
+    .section:nth-child(6) { animation-delay: 0.25s; }
+    .section:nth-child(7) { animation-delay: 0.30s; }
+    .section:nth-child(8) { animation-delay: 0.35s; }
+
+    /* Dot indicator for active section in sidebar */
+    .sidebar-link::before {
+      content: '';
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0;
+      transition: opacity var(--transition);
+      flex-shrink: 0;
+    }
+    .sidebar-link.active::before { opacity: 1; }
+
+    /* Progress bar at top */
+    .progress-bar {
+      position: fixed;
+      top: var(--top-h);
+      left: 0;
+      height: 2px;
+      background: var(--green);
+      z-index: 99;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 8px var(--green);
+    }
+  </style>
+</head>
+<body lang="zh-CN">
+
+  <!-- Read progress bar -->
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- ═══ TOP NAV ═══ -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">
+        <span class="topbar-logo-text">&gt;_</span>
+      </div>
+      <span class="topbar-title">remote-iterm2</span>
+      <span class="theme-pill">v1.2.5</span>
+    </div>
+    <div class="topbar-actions">
+      <div class="lang-switch">
+        <button class="lang-btn active" data-lang="zh">中文</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+      </div>
+      <button class="mobile-menu-btn" id="menuBtn">☰</button>
+    </div>
+  </header>
+
+  <!-- Mobile sidebar overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- ═══ LAYOUT ═══ -->
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label" data-i18n="nav.guide">使用指南</div>
+        <ul class="sidebar-nav">
+          <li><a class="sidebar-link active" href="#hero" data-i18n="nav.intro">简介</a></li>
+          <li><a class="sidebar-link" href="#ch1"  data-i18n="nav.ch1">快速开始</a></li>
+          <li><a class="sidebar-link" href="#ch2"  data-i18n="nav.ch2">界面总览</a></li>
+          <li><a class="sidebar-link" href="#ch3"  data-i18n="nav.ch3">顶部状态栏</a></li>
+          <li><a class="sidebar-link" href="#ch4"  data-i18n="nav.ch4">标签页管理</a></li>
+          <li><a class="sidebar-link" href="#ch5"  data-i18n="nav.ch5">终端内容区</a></li>
+          <li><a class="sidebar-link" href="#ch6"  data-i18n="nav.ch6">分屏视图</a></li>
+          <li><a class="sidebar-link" href="#ch7"  data-i18n="nav.ch7">窗口地图</a></li>
+          <li><a class="sidebar-link" href="#ch8"  data-i18n="nav.ch8">广播模式</a></li>
+          <li><a class="sidebar-link" href="#ch9"  data-i18n="nav.ch9">快捷操作栏</a></li>
+          <li><a class="sidebar-link" href="#ch10" data-i18n="nav.ch10">命令输入区</a></li>
+          <li><a class="sidebar-link" href="#ch11" data-i18n="nav.ch11">虚拟键盘</a></li>
+          <li><a class="sidebar-link" href="#ch12" data-i18n="nav.ch12">颜色语义</a></li>
+          <li><a class="sidebar-link" href="#ch13" data-i18n="nav.ch13">PWA 安装</a></li>
+          <li><a class="sidebar-link" href="#ch14" data-i18n="nav.ch14">配置与 FAQ</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- ═══ MAIN ═══ -->
+    <main class="main">
+
+      <!-- ════ HERO ════ -->
+      <div class="hero" id="hero">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          v1.2.5 &nbsp;·&nbsp; <span data-i18n="hero.badge">手机远程控制</span>
+        </div>
+        <h1>remote-iterm2</h1>
+        <p class="hero-sub" data-i18n="hero.sub">通过手机浏览器，在局域网内远程控制 Mac 上的 iTerm2 终端。实时输出、语法着色、多窗口管理、分屏对比、广播命令——全部在你的掌心中。</p>
+
+        <div class="hero-terminal">
+          <div class="hero-terminal-bar">
+            <span class="hero-dot hero-dot-red"></span>
+            <span class="hero-dot hero-dot-yellow"></span>
+            <span class="hero-dot hero-dot-green"></span>
+          </div>
+          <div class="hero-terminal-body">
+            <span class="line c-zinc">$ <span data-i18n="hero.term.cmd1">npm install -g remote-iterm2</span></span>
+            <span class="line c-zinc">$ remote-iterm2</span>
+            <span class="line c-green" data-i18n="hero.term.ready">remote-iterm2 is running</span>
+            <span class="line c-zinc">→ <span data-i18n="hero.term.url">Open on your phone:</span></span>
+            <span class="line c-blue">  http://192.168.1.119:7291</span>
+            <span class="line c-zinc">→ <span data-i18n="hero.term.stop">Stop:</span> <span class="c-yellow">remote-iterm2 stop</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ CH1 ════ -->
+      <section class="section" id="ch1">
+        <div class="section-id">01</div>
+        <h2 data-i18n="ch1.h">快速开始</h2>
+
+        <h3 data-i18n="ch1.install">安装</h3>
+        <div class="code-block">
+          <span class="c-zinc">$ </span><span class="cmd">npm install -g remote-iterm2</span>
+        </div>
+
+        <h3 data-i18n="ch1.commands">启动 / 停止 / 重启</h3>
+        <div class="code-block">
+          <span class="cmd">remote-iterm2</span>          <span class="comment"># <span data-i18n="ch1.start">启动服务</span></span><br>
+          <span class="cmd">remote-iterm2 stop</span>     <span class="comment"># <span data-i18n="ch1.stop">停止服务</span></span><br>
+          <span class="cmd">remote-iterm2 restart</span>  <span class="comment"># <span data-i18n="ch1.restart">重启服务</span></span>
+        </div>
+
+        <div class="callout callout-info">
+          <span class="callout-icon">💡</span>
+          <span data-i18n="ch1.callout">启动后终端打印访问地址，例如 <code>http://192.168.1.119:7291</code>，用手机 Safari 打开即可（需与 Mac 处于同一 Wi-Fi）。</span>
+        </div>
+
+        <h3 data-i18n="ch1.requirements">系统要求</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.item">项目</th><th data-i18n="t.requirement">要求</th></tr></thead>
+            <tbody>
+              <tr><td>macOS</td><td data-i18n="ch1.macos">需安装 iTerm2</td></tr>
+              <tr><td>Node.js</td><td data-i18n="ch1.node">>= 18</td></tr>
+              <tr><td>Port</td><td data-i18n="ch1.port">7291（HTTP + WebSocket 共用）</td></tr>
+              <tr><td>Mobile</td><td data-i18n="ch1.mobile">与 Mac 处于同一局域网</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ════ CH2 ════ -->
+      <section class="section" id="ch2">
+        <div class="section-id">02</div>
+        <h2 data-i18n="ch2.h">界面总览</h2>
+
+        <div class="layout-diagram" aria-label="Interface layout diagram">
+<span class="lbl">┌──────────────────────────────────────────────────┐</span>
+<span class="lbl">│</span>  <span class="lbl2">顶部状态栏</span>  <span class="lbl">│</span>  <span class="lbl2">连接状态 · 延迟 · ALERT · 广播 · 分屏</span>
+<span class="lbl">├──────────────────────────────────────────────────┤</span>
+<span class="lbl">│</span>  <span class="lbl2">标签页管理栏</span>  <span class="lbl">│</span>  <span class="lbl2">Tab 切换 / 长按重命名 / + / ×</span>
+<span class="lbl">├──────────────────────────────────────────────────┤</span>
+<span class="lbl">│</span>                      <span class="lbl2">│</span>
+<span class="lbl">│</span>  <span class="lbl2">终端内容区</span>      <span class="lbl">│</span>  <span class="lbl2">实时输出 · 语法着色 · 光标 · 滚动</span>
+<span class="lbl">│</span>                      <span class="lbl2">│</span>
+<span class="lbl">├──────────────────────────────────────────────────┤</span>
+<span class="lbl">│</span>  <span class="lbl2">快捷操作栏</span>      <span class="lbl">│</span>  <span class="lbl2">↵ · ESC · ^C · ^D · ^Z · ^L · ↑↓ · 剪贴板</span>
+<span class="lbl">├──────────────────────────────────────────────────┤</span>
+<span class="lbl">│</span>  <span class="lbl2">命令输入区</span>      <span class="lbl">│</span>  <span class="lbl2">输入命令 · 发送 · 历史导航 · 切换键盘</span>
+<span class="lbl">└──────────────────────────────────────────────────┘</span></div>
+
+        <div class="callout callout-info">
+          <span class="callout-icon">📱</span>
+          <span data-i18n="ch2.callout">横屏模式下布局自动压缩高度，优化手机空间利用率。</span>
+        </div>
+      </section>
+
+      <!-- ════ CH3 ════ -->
+      <section class="section" id="ch3">
+        <div class="section-id">03</div>
+        <h2 data-i18n="ch3.h">顶部状态栏</h2>
+
+        <h3 data-i18n="ch3.conn">3.1 &nbsp;连接状态指示灯</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.color">颜色</th><th data-i18n="t.meaning">含义</th></tr></thead>
+            <tbody>
+              <tr><td><span class="c-green-bg">● 绿色（光晕动画）</span></td><td data-i18n="ch3.connected">已连接到 Mac</td></tr>
+              <tr><td><span class="c-red-bg">● 红色</span></td><td data-i18n="ch3.disconnected">连接断开，自动重连中</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p data-i18n="ch3.connnote">断开时全屏出现半透明遮罩并显示 RECONNECTING，自动重连，无需手动刷新。</p>
+
+        <h3 data-i18n="ch3.ping">3.2 &nbsp;延迟显示（ms）</h3>
+        <p data-i18n="ch3.pingnote">每 5 秒自动测量往返延迟，颜色区分网络质量：</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.color">颜色</th><th data-i18n="t.latency">延迟范围</th><th data-i18n="t.status">网络状态</th></tr></thead>
+            <tbody>
+              <tr><td><span class="c-green-bg">绿色</span></td><td>< 50ms</td><td data-i18n="ch3.good">良好</td></tr>
+              <tr><td><span class="c-yellow-bg">黄色</span></td><td>50–149ms</td><td data-i18n="ch3.fair">一般</td></tr>
+              <tr><td><span class="c-red-bg">红色</span></td><td>≥ 150ms</td><td data-i18n="ch3.poor">较差</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 data-i18n="ch3.alert">3.3 &nbsp;ALERT — 长命令完成提醒</h3>
+        <p data-i18n="ch3.alertnote">点击 🔔 图标切换。开启后（<span class="c-yellow-bg">黄色高亮</span>），当终端输出停止超过 4 秒，手机会震动提醒（双次短振）。适合等待编译、下载等耗时命令时使用。</p>
+
+        <h3 data-i18n="ch3.scroll">3.4 &nbsp;SCROLL — 滚动锁定</h3>
+        <p data-i18n="ch3.scrollnote"><span class="c-red-bg">锁定</span>（红色）：终端内容不会自动滚动，可自由查看历史。<span class="c-green-bg">解锁</span>（默认）：有新输出时自动滚动到最新行。</p>
+
+        <h3 data-i18n="ch3.cast">3.5 &nbsp;CAST — 广播模式</h3>
+        <p data-i18n="ch3.castnote">点击 📡 图标切换。开启后（<span class="c-purple-bg">紫色高亮</span>），命令同时广播到多个窗口。详见 <a href="#ch8">第 8 节</a>。</p>
+
+        <h3 data-i18n="ch3.split">3.6 &nbsp;SPLIT — 分屏视图</h3>
+        <p data-i18n="ch3.splitnote">点击 ⊟ 图标切换。开启后（<span class="c-blue-bg">蓝色高亮</span>），屏幕分为两个独立终端面板。详见 <a href="#ch6">第 6 节</a>。仅有一个 Session 时此按钮变灰禁用。</p>
+
+        <h3 data-i18n="ch3.win">3.7 &nbsp;N win — 窗口切换</h3>
+        <p data-i18n="ch3.winnote">显示当前 iTerm2 窗口总数（如 "2 win"）。点击弹出窗口地图可切换窗口。只有 1 个窗口时按钮变灰禁用。</p>
+      </section>
+
+      <!-- ════ CH4 ════ -->
+      <section class="section" id="ch4">
+        <div class="section-id">04</div>
+        <h2 data-i18n="ch4.h">标签页管理栏</h2>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.action">操作</th><th data-i18n="t.description">说明</th></tr></thead>
+            <tbody>
+              <tr><td data-i18n="ch4.switch">切换标签页</td><td data-i18n="ch4.switchdesc">点击标签名，活跃标签以绿色下划线高亮。</td></tr>
+              <tr><td data-i18n="ch4.rename">重命名标签页</td><td data-i18n="ch4.renamedesc">长按标签名约 0.5 秒，弹出输入框，输入新名称后回车确认。</td></tr>
+              <tr><td data-i18n="ch4.new">新建标签页</td><td data-i18n="ch4.newdesc">点击标签栏最右侧 ＋ 按钮，在 iTerm2 新建标签页。</td></tr>
+              <tr><td data-i18n="ch4.close">关闭标签页</td><td data-i18n="ch4.closedesc">点击标签栏最右侧 ✕ 按钮，关闭当前标签（仅剩 1 个时自动禁用）。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout callout-info">
+          <span class="callout-icon">💡</span>
+          <span data-i18n="ch4.callout">分屏模式下，顶部标签栏显示当前焦点面板对应窗口的标签页。</span>
+        </div>
+      </section>
+
+      <!-- ════ CH5 ════ -->
+      <section class="section" id="ch5">
+        <div class="section-id">05</div>
+        <h2 data-i18n="ch5.h">终端内容区</h2>
+
+        <h3 data-i18n="ch5.color">5.1 &nbsp;语法着色规则</h3>
+        <p data-i18n="ch5.colornote">终端输出按内容类型自动着色，方便快速识别关键信息：</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.color">颜色</th><th data-i18n="t.content">代表内容</th></tr></thead>
+            <tbody>
+              <tr><td style="color:#f5f5f5;font-weight:700" data-i18n="ch5.c1">亮白色（粗体）</td><td data-i18n="ch5.c1d">当前命令提示行（最后一行）</td></tr>
+              <tr><td style="color:#22d3ee;font-weight:700" data-i18n="ch5.c2">青色（粗体）</td><td data-i18n="ch5.c2d">Shell 提示符（user@host $、%、# 等）</td></tr>
+              <tr><td style="color:#f87171" data-i18n="ch5.c3">红色</td><td data-i18n="ch5.c3d">错误信息（error、FAIL、fatal、ENOENT 等）</td></tr>
+              <tr><td style="color:#fbbf24" data-i18n="ch5.c4">黄色</td><td data-i18n="ch5.c4d">警告信息（warning、WARN、deprecated 等）</td></tr>
+              <tr><td style="color:#34d399" data-i18n="ch5.c5">绿色</td><td data-i18n="ch5.c5d">成功信息（success、done、compiled、OK 等）</td></tr>
+              <tr><td style="color:#818cf8" data-i18n="ch5.c6">紫蓝色</td><td data-i18n="ch5.c6d">文件路径（/、~/、./ 开头）及目录树符号</td></tr>
+              <tr><td style="color:#4ade80" data-i18n="ch5.c7">浅绿色</td><td data-i18n="ch5.c7d">Git diff 新增行（+ 开头）</td></tr>
+              <tr><td style="color:#fb7185" data-i18n="ch5.c8">粉红色</td><td data-i18n="ch5.c8d">Git diff 删除行（- 开头）</td></tr>
+              <tr><td style="color:#52525b" data-i18n="ch5.c9">暗灰色</td><td data-i18n="ch5.c9d">注释行（# 开头）</td></tr>
+              <tr><td style="color:#d4d4d8" data-i18n="ch5.c10">浅灰色</td><td data-i18n="ch5.c10d">普通输出</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 data-i18n="ch5.cursor">5.2 &nbsp;光标</h3>
+        <p data-i18n="ch5.cursornote">终端末尾显示 <span class="c-green-bg">绿色闪烁方块光标 █</span>（仅在 Shell 提示符状态下出现）。运行交互式应用（vim、htop 等）时光标自动隐藏。</p>
+
+        <h3 data-i18n="ch5.scroll">5.3 &nbsp;滚动查看</h3>
+        <p data-i18n="ch5.scrollnote">在终端区域上下滑动查看历史输出。开启<a href="#ch3.scroll">滚动锁定</a>后，新输出不会打断浏览。</p>
+      </section>
+
+      <!-- ════ CH6 ════ -->
+      <section class="section" id="ch6">
+        <div class="section-id">06</div>
+        <h2 data-i18n="ch6.h">分屏视图</h2>
+        <p data-i18n="ch6.intro">同时查看两个不同 Session 的终端输出，适合对比日志、同时监控多个进程。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.action">操作</th><th data-i18n="t.description">说明</th></tr></thead>
+            <tbody>
+              <tr><td data-i18n="ch6.enable">开启分屏</td><td data-i18n="ch6.enabledesc">点击 SPLIT 按钮（需至少 2 个 Session）。主面板 <span class="c-green-bg">绿色边框</span>，分屏面板 <span class="c-blue-bg">蓝色边框</span>。</td></tr>
+              <tr><td data-i18n="ch6.layout">布局方向</td><td data-i18n="ch6.layoutdesc">竖屏上下分屏；横屏左右分屏。</td></tr>
+              <tr><td data-i18n="ch6.resize">调整比例</td><td data-i18n="ch6.resizedesc">拖动分隔条，可调整主面板与分屏面板比例（20%–80%）。</td></tr>
+              <tr><td data-i18n="ch6.focus">切换焦点</td><td data-i18n="ch6.focusdesc">点击任意面板，边框变亮即为焦点面板，后续命令发送到该 Session。</td></tr>
+              <tr><td data-i18n="ch6.splittab">分屏标签栏</td><td data-i18n="ch6.splittabdesc">分屏面板有独立标签栏，支持切换标签、新建/关闭，可为分屏面板选择不同窗口。</td></tr>
+              <tr><td data-i18n="ch6.disable">关闭分屏</td><td data-i18n="ch6.disabledesc">再次点击 SPLIT 按钮，恢复单面板模式。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ════ CH7 ════ -->
+      <section class="section" id="ch7">
+        <div class="section-id">07</div>
+        <h2 data-i18n="ch7.h">窗口地图</h2>
+        <p data-i18n="ch7.intro">点击 <span class="c-green-bg">N win</span> 按钮打开窗口地图。弹出半透明全屏遮罩，按比例还原各 iTerm2 窗口在屏幕上的实际位置和大小。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.function">功能</th><th data-i18n="t.description">说明</th></tr></thead>
+            <tbody>
+              <tr><td data-i18n="ch7.switch">切换窗口</td><td data-i18n="ch7.switchdesc">点击窗口编号块切换，地图自动关闭；点击遮罩空白区域取消。</td></tr>
+              <tr><td data-i18n="ch7.broadcast">广播目标选择</td><td data-i18n="ch7.broadcastdesc">广播模式下变为多选模式，<span class="c-purple-bg">紫色高亮</span> = 已选为广播目标。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ════ CH8 ════ -->
+      <section class="section" id="ch8">
+        <div class="section-id">08</div>
+        <h2 data-i18n="ch8.h">广播模式</h2>
+        <p data-i18n="ch8.intro">将同一条命令同时发送到多个 iTerm2 窗口，适合批量操作多台服务或多个项目。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.step">步骤</th><th data-i18n="t.description">说明</th></tr></thead>
+            <tbody>
+              <tr><td data-i18n="ch8.s1">1. 开启广播</td><td data-i18n="ch8.s1d">点击 CAST 按钮（默认选中所有窗口），标签栏下方出现 <span class="c-purple-bg">紫色横幅</span>。</td></tr>
+              <tr><td data-i18n="ch8.s2">2. 选择目标</td><td data-i18n="ch8.s2d">点击横幅右侧 EDIT，在窗口地图多选模式中勾选目标窗口。</td></tr>
+              <tr><td data-i18n="ch8.s3">3. 发送命令</td><td data-i18n="ch8.s3d">输入框提示符变为 <span class="c-purple-bg">&gt;</span>，发送后命令同时发至所有目标窗口。</td></tr>
+              <tr><td data-i18n="ch8.s4">4. 关闭广播</td><td data-i18n="ch8.s4d">再次点击 CAST 按钮，恢复单窗口发送。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ════ CH9 ════ -->
+      <section class="section" id="ch9">
+        <div class="section-id">09</div>
+        <h2 data-i18n="ch9.h">快捷操作栏</h2>
+        <p data-i18n="ch9.intro">位于终端内容区下方，提供高频终端操作的一键按钮，无需展开键盘即可操作。</p>
+
+        <h3 data-i18n="ch9.ctrl">9.1 &nbsp;控制键</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.button">按钮</th><th data-i18n="t.function">功能</th><th data-i18n="t.key">发送字符</th></tr></thead>
+            <tbody>
+              <tr><td><span class="c-green-bg">↵ Enter</span></td><td data-i18n="ch9.enter">发送回车</td><td class="mono">\n</td></tr>
+              <tr><td><span class="c-red-bg">ESC</span></td><td data-i18n="ch9.esc">发送 Escape 键</td><td class="mono">\x1b</td></tr>
+              <tr><td><span class="c-red-bg">^C</span></td><td data-i18n="ch9.c">中断当前进程（Ctrl+C）</td><td class="mono">\x03</td></tr>
+              <tr><td><span class="c-yellow-bg">^D</span></td><td data-i18n="ch9.d">发送 EOF / 退出（Ctrl+D）</td><td class="mono">\x04</td></tr>
+              <tr><td><span class="c-yellow-bg">^Z</span></td><td data-i18n="ch9.z">挂起进程到后台（Ctrl+Z）</td><td class="mono">\x1a</td></tr>
+              <tr><td><span class="c-blue-bg">^L</span></td><td data-i18n="ch9.l">清屏（Ctrl+L）</td><td class="mono">\x0c</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 data-i18n="ch9.nav">9.2 &nbsp;光标导航键</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.button">按钮</th><th data-i18n="t.function">功能</th></tr></thead>
+            <tbody>
+              <tr><td><span class="c-purple-bg">↑ 上箭头</span></td><td data-i18n="ch9.up">上方向键（浏览历史命令 / 菜单导航）</td></tr>
+              <tr><td><span class="c-purple-bg">↓ 下箭头</span></td><td data-i18n="ch9.down">下方向键</td></tr>
+              <tr><td><span class="c-purple-bg">TAB</span></td><td data-i18n="ch9.tab">发送 Tab 键（自动补全）</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 data-i18n="ch9.clip">9.3 &nbsp;剪贴板操作</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.button">按钮</th><th data-i18n="t.function">功能</th></tr></thead>
+            <tbody>
+              <tr><td><span class="c-blue-bg">📋 粘贴</span></td><td data-i18n="ch9.paste">从手机剪贴板读取内容，直接发送到终端</td></tr>
+              <tr><td data-i18n="ch9.copybtn">复制</td><td data-i18n="ch9.copydesc">将当前终端内容全部复制到手机剪贴板</td></tr>
+              <tr><td><span class="c-red-bg">🗑️ 清除行</span></td><td data-i18n="ch9.clear">清除当前命令行输入（Ctrl+U）</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout callout-warning">
+          <span class="callout-icon">⚠️</span>
+          <span data-i18n="ch9.clipnote">iOS 首次使用粘贴，需在弹窗中确认允许剪贴板访问权限。</span>
+        </div>
+      </section>
+
+      <!-- ════ CH10 ════ -->
+      <section class="section" id="ch10">
+        <div class="section-id">10</div>
+        <h2 data-i18n="ch10.h">命令输入区</h2>
+
+        <h3 data-i18n="ch10.input">10.1 &nbsp;命令输入框</h3>
+        <p data-i18n="ch10.inputnote">输入框左侧提示符：<span class="c-green-bg">$</span> 普通模式 → 当前焦点 Session；<span class="c-purple-bg">&gt;</span> 广播模式 → 所有选中窗口。已禁用自动纠错和首字母大写，适合终端命令输入。</p>
+
+        <h3 data-i18n="ch10.send">10.2 &nbsp;发送命令</h3>
+        <p data-i18n="ch10.sendnote">点击右侧发送按钮，或按键盘 Return 键。发送后命令自动保存到历史（最多 100 条，存于浏览器 localStorage）。</p>
+
+        <h3 data-i18n="ch10.history">10.3 &nbsp;命令历史导航</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.action">操作</th><th data-i18n="t.effect">效果</th></tr></thead>
+            <tbody>
+              <tr><td data-i18n="ch10.up">按 ↑ 方向键</td><td data-i18n="ch10.upd">向历史前翻（更早的命令）</td></tr>
+              <tr><td data-i18n="ch10.down">按 ↓ 方向键</td><td data-i18n="ch10.downd">向历史后翻（更近的命令），回到底部恢复原始输入</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 data-i18n="ch10.kb">10.4 &nbsp;切换虚拟键盘</h3>
+        <p data-i18n="ch10.kbnote">点击输入区左侧的键盘图标，切换到内置虚拟键盘模式（详见 <a href="#ch11">第 11 节</a>）。</p>
+      </section>
+
+      <!-- ════ CH11 ════ -->
+      <section class="section" id="ch11">
+        <div class="section-id">11</div>
+        <h2 data-i18n="ch11.h">虚拟键盘</h2>
+        <p data-i18n="ch11.intro">专为终端操作设计的内置软键盘，提供字母、数字及常用符号布局，无需依赖系统键盘。</p>
+
+        <h3 data-i18n="ch11.enter">11.1 &nbsp;进入 / 退出</h3>
+        <p data-i18n="ch11.enterdesc">进入：点击命令输入区左侧的键盘图标。<br>退出：点击虚拟键盘左下角的 Terminal 图标，返回命令输入框。</p>
+
+        <h3 data-i18n="ch11.modes">11.2 &nbsp;三种键盘布局</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.mode">模式</th><th data-i18n="t.content">内容</th><th data-i18n="t.switch">切换方式</th></tr></thead>
+            <tbody>
+              <tr><td data-i18n="ch11.abc">ABC（字母）</td><td data-i18n="ch11.abcd">标准 QWERTY，含 SHIFT（单次大写）和 DEL</td><td data-i18n="ch11.default">默认</td></tr>
+              <tr><td data-i18n="ch11.num">123（符号）</td><td data-i18n="ch11.numd">数字 0–9、/ . ~ * $ | > < & ; = " ' \ ` # 等</td><td data-i18n="ch11.numswitch">按 123 键</td></tr>
+              <tr><td>#+=（高级）</td><td data-i18n="ch11.symd">! @ % ^ + = ? : ( ) [ ] { } , ; " ' ` ~ \ _ 等</td><td data-i18n="ch11.symswitch">符号模式下按 #+= 键</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 data-i18n="ch11.fnrow">11.3 &nbsp;底部功能行</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.button">按钮</th><th data-i18n="t.function">功能</th></tr></thead>
+            <tbody>
+              <tr><td>🖥️ Terminal</td><td data-i18n="ch11.exit">退出虚拟键盘，返回命令输入框</td></tr>
+              <tr><td>ABC / 123</td><td data-i18n="ch11.abcnum">字母 / 符号模式切换</td></tr>
+              <tr><td>-</td><td data-i18n="ch11.dash">快速输入连字符</td></tr>
+              <tr><td>SPACE</td><td data-i18n="ch11.space">发送空格</td></tr>
+              <tr><td>.</td><td data-i18n="ch11.dot">快速输入句点</td></tr>
+              <tr><td><span class="c-green-bg">↵</span></td><td data-i18n="ch11.enterbtn">发送回车</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ════ CH12 ════ -->
+      <section class="section" id="ch12">
+        <div class="section-id">12</div>
+        <h2 data-i18n="ch12.h">颜色语义说明</h2>
+        <p data-i18n="ch12.intro">整个界面使用统一的颜色系统，便于快速识别状态：</p>
+
+        <div class="color-swatches">
+          <div class="swatch">
+            <span class="swatch-dot" style="background:#10b981;color:#10b981"></span>
+            <div>
+              <div style="color:#e4e4e7;font-weight:600;font-size:13px">绿色 #10b981</div>
+              <div style="color:#71717a;font-size:12px" data-i18n="ch12.green">主色调：连接正常、当前选中 Tab、主面板边框、发送按钮</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <span class="swatch-dot" style="background:#38bdf8;color:#38bdf8"></span>
+            <div>
+              <div style="color:#e4e4e7;font-weight:600;font-size:13px">青蓝色 #38bdf8</div>
+              <div style="color:#71717a;font-size:12px" data-i18n="ch12.blue">分屏面板标识色</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <span class="swatch-dot" style="background:#818cf8;color:#818cf8"></span>
+            <div>
+              <div style="color:#e4e4e7;font-weight:600;font-size:13px">紫色 #818cf8</div>
+              <div style="color:#71717a;font-size:12px" data-i18n="ch12.purple">广播模式标识色</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <span class="swatch-dot" style="background:#fbbf24;color:#fbbf24"></span>
+            <div>
+              <div style="color:#e4e4e7;font-weight:600;font-size:13px">黄色 #fbbf24</div>
+              <div style="color:#71717a;font-size:12px" data-i18n="ch12.yellow">网络延迟中等、ALERT 开启状态</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <span class="swatch-dot" style="background:#f87171;color:#f87171"></span>
+            <div>
+              <div style="color:#e4e4e7;font-weight:600;font-size:13px">红色 #f87171</div>
+              <div style="color:#71717a;font-size:12px" data-i18n="ch12.red">连接断开、网络延迟差、滚动锁定开启</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ CH13 ════ -->
+      <section class="section" id="ch13">
+        <div class="section-id">13</div>
+        <h2 data-i18n="ch13.h">PWA 安装</h2>
+        <p data-i18n="ch13.intro">将 remote-iterm2 添加为手机主屏幕应用，获得全屏无浏览器栏的沉浸体验：</p>
+        <ol>
+          <li data-i18n="ch13.s1">在 iPhone Safari 中打开应用 URL（如 http://192.168.1.119:7291）</li>
+          <li data-i18n="ch13.s2">点击底部分享按钮 → <strong>添加到主屏幕</strong></li>
+          <li data-i18n="ch13.s3">确认名称后点击<strong>添加</strong></li>
+        </ol>
+        <div class="callout callout-info">
+          <span class="callout-icon">✨</span>
+          <span data-i18n="ch13.callout">安装后以全屏模式启动，自动处理 Dynamic Island / 刘海屏安全区域，屏幕常亮不锁屏。</span>
+        </div>
+      </section>
+
+      <!-- ════ CH14 ════ -->
+      <section class="section" id="ch14">
+        <div class="section-id">14</div>
+        <h2 data-i18n="ch14.h">配置说明与常见问题</h2>
+
+        <h3 data-i18n="ch14.config">配置文件</h3>
+        <p data-i18n="ch14.confignote">在 Mac 上创建 <code>~/.remote-iterm2.json</code> 可自定义行为：</p>
+        <div class="code-block">
+<span class="key">"tabColor"</span><span class="c-zinc">: </span><span class="str">false</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="t.option">配置项</th><th data-i18n="t.default">默认值</th><th data-i18n="t.description">说明</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">tabColor</td><td><span class="c-green-bg">true</span></td><td data-i18n="ch14.tabcolor">切换窗口时自动改变 iTerm2 标签背景色。设为 false 可保留手动颜色。</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 data-i18n="ch14.faq">常见问题</h3>
+        <div class="faq-item">
+          <div class="faq-q">Q: <span data-i18n="ch14.q1">页面一直显示 RECONNECTING？</span></div>
+          <div class="faq-a" data-i18n="ch14.a1">请确认手机和 Mac 在同一 Wi-Fi 下，且 Mac 已运行 remote-iterm2（端口 7291 未被防火墙拦截）。</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Q: <span data-i18n="ch14.q2">发送命令后没有执行？</span></div>
+          <div class="faq-a" data-i18n="ch14.a2">请使用快捷操作栏的 Enter 按钮，或确保通过发送按钮提交，而非直接按系统键盘 Return。</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Q: <span data-i18n="ch14.q3">粘贴按钮没有效果？</span></div>
+          <div class="faq-a" data-i18n="ch14.a3">iOS 首次使用需授权剪贴板访问权限，在弹窗中选择「允许粘贴」。</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Q: <span data-i18n="ch14.q4">终端显示 ANSI 颜色转义代码？</span></div>
+          <div class="faq-a" data-i18n="ch14.a4">当前版本以正则匹配进行语义着色，不解析 ANSI 转义序列，部分程序的颜色输出可能显示原始字符，属已知限制。</div>
+        </div>
+      </section>
+
+      <!-- ════ FOOTER ════ -->
+      <footer class="footer">
+        <span data-i18n="footer">remote-iterm2 v1.2.5 &nbsp;·&nbsp; github.com/richardhuang/remote-iterm2 &nbsp;·&nbsp; MIT License</span>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       JAVASCRIPT — Language Switcher + Sidebar + Scroll
+  ═══════════════════════════════════════════════════════════ -->
+  <script>
+  // ── i18n Dictionary ──────────────────────────────────────────────────────
+  const i18n = {
+    zh: {
+      'nav.guide': '使用指南',
+      'nav.intro': '简介',
+      'nav.ch1': '快速开始',
+      'nav.ch2': '界面总览',
+      'nav.ch3': '顶部状态栏',
+      'nav.ch4': '标签页管理',
+      'nav.ch5': '终端内容区',
+      'nav.ch6': '分屏视图',
+      'nav.ch7': '窗口地图',
+      'nav.ch8': '广播模式',
+      'nav.ch9': '快捷操作栏',
+      'nav.ch10': '命令输入区',
+      'nav.ch11': '虚拟键盘',
+      'nav.ch12': '颜色语义',
+      'nav.ch13': 'PWA 安装',
+      'nav.ch14': '配置与 FAQ',
+      'hero.badge': '手机远程控制',
+      'hero.sub': '通过手机浏览器，在局域网内远程控制 Mac 上的 iTerm2 终端。实时输出、语法着色、多窗口管理、分屏对比、广播命令——全部在你的掌心中。',
+      'hero.term.cmd1': 'npm install -g remote-iterm2',
+      'hero.term.ready': 'remote-iterm2 is running',
+      'hero.term.url': 'Open on your phone:',
+      'hero.term.stop': 'Stop:',
+      'ch1.h': '快速开始',
+      'ch1.install': '安装',
+      'ch1.commands': '启动 / 停止 / 重启',
+      'ch1.start': '启动服务',
+      'ch1.stop': '停止服务',
+      'ch1.restart': '重启服务',
+      'ch1.callout': '启动后终端打印访问地址，例如 <code>http://192.168.1.119:7291</code>，用手机 Safari 打开即可（需与 Mac 处于同一 Wi-Fi）。',
+      'ch1.requirements': '系统要求',
+      'ch1.macos': '需安装 iTerm2',
+      'ch1.node': '>= 18',
+      'ch1.port': '7291（HTTP + WebSocket 共用）',
+      'ch1.mobile': '与 Mac 处于同一局域网',
+      'ch2.h': '界面总览',
+      'ch2.callout': '横屏模式下布局自动压缩高度，优化手机空间利用率。',
+      'ch3.h': '顶部状态栏',
+      'ch3.conn': '3.1 连接状态指示灯',
+      'ch3.connected': '已连接到 Mac',
+      'ch3.disconnected': '连接断开，自动重连中',
+      'ch3.connnote': '断开时全屏出现半透明遮罩并显示 RECONNECTING，自动重连，无需手动刷新。',
+      'ch3.ping': '3.2 延迟显示（ms）',
+      'ch3.pingnote': '每 5 秒自动测量往返延迟，颜色区分网络质量：',
+      'ch3.good': '良好',
+      'ch3.fair': '一般',
+      'ch3.poor': '较差',
+      'ch3.alert': '3.3 ALERT — 长命令完成提醒',
+      'ch3.alertnote': '点击 🔔 图标切换。开启后（黄色高亮），当终端输出停止超过 4 秒，手机会震动提醒（双次短振）。适合等待编译、下载等耗时命令时使用。',
+      'ch3.scroll': '3.4 SCROLL — 滚动锁定',
+      'ch3.scrollnote': '锁定（红色）：终端内容不会自动滚动，可自由查看历史。解锁（默认）：有新输出时自动滚动到最新行。',
+      'ch3.cast': '3.5 CAST — 广播模式',
+      'ch3.castnote': '点击 📡 图标切换。开启后（紫色高亮），命令同时广播到多个窗口。详见第 8 节。',
+      'ch3.split': '3.6 SPLIT — 分屏视图',
+      'ch3.splitnote': '点击 ⊟ 图标切换。开启后（蓝色高亮），屏幕分为两个独立终端面板。详见第 6 节。仅有一个 Session 时此按钮变灰禁用。',
+      'ch3.win': '3.7 N win — 窗口切换',
+      'ch3.winnote': '显示当前 iTerm2 窗口总数（如 "2 win"）。点击弹出窗口地图可切换窗口。只有 1 个窗口时按钮变灰禁用。',
+      'ch4.h': '标签页管理栏',
+      'ch4.switch': '切换标签页',
+      'ch4.switchdesc': '点击标签名，活跃标签以绿色下划线高亮。',
+      'ch4.rename': '重命名标签页',
+      'ch4.renamedesc': '长按标签名约 0.5 秒，弹出输入框，输入新名称后回车确认。',
+      'ch4.new': '新建标签页',
+      'ch4.newdesc': '点击标签栏最右侧 ＋ 按钮，在 iTerm2 新建标签页。',
+      'ch4.close': '关闭标签页',
+      'ch4.closedesc': '点击标签栏最右侧 ✕ 按钮，关闭当前标签（仅剩 1 个时自动禁用）。',
+      'ch4.callout': '分屏模式下，顶部标签栏显示当前焦点面板对应窗口的标签页。',
+      'ch5.h': '终端内容区',
+      'ch5.color': '5.1 语法着色规则',
+      'ch5.colornote': '终端输出按内容类型自动着色，方便快速识别关键信息：',
+      'ch5.c1': '亮白色（粗体）',
+      'ch5.c1d': '当前命令提示行（最后一行）',
+      'ch5.c2': '青色（粗体）',
+      'ch5.c2d': 'Shell 提示符（user@host $、%、# 等）',
+      'ch5.c3': '红色',
+      'ch5.c3d': '错误信息（error、FAIL、fatal、ENOENT 等）',
+      'ch5.c4': '黄色',
+      'ch5.c4d': '警告信息（warning、WARN、deprecated 等）',
+      'ch5.c5': '绿色',
+      'ch5.c5d': '成功信息（success、done、compiled、OK 等）',
+      'ch5.c6': '紫蓝色',
+      'ch5.c6d': '文件路径（/、~/、./ 开头）及目录树符号',
+      'ch5.c7': '浅绿色',
+      'ch5.c7d': 'Git diff 新增行（+ 开头）',
+      'ch5.c8': '粉红色',
+      'ch5.c8d': 'Git diff 删除行（- 开头）',
+      'ch5.c9': '暗灰色',
+      'ch5.c9d': '注释行（# 开头）',
+      'ch5.c10': '浅灰色',
+      'ch5.c10d': '普通输出',
+      'ch5.cursor': '5.2 光标',
+      'ch5.cursornote': '终端末尾显示绿色闪烁方块光标 █（仅在 Shell 提示符状态下出现）。运行交互式应用（vim、htop 等）时光标自动隐藏。',
+      'ch5.scroll': '5.3 滚动查看',
+      'ch5.scrollnote': '在终端区域上下滑动查看历史输出。开启滚动锁定后，新输出不会打断浏览。',
+      'ch6.h': '分屏视图',
+      'ch6.intro': '同时查看两个不同 Session 的终端输出，适合对比日志、同时监控多个进程。',
+      'ch6.enable': '开启分屏',
+      'ch6.enabledesc': '点击 SPLIT 按钮（需至少 2 个 Session）。主面板绿色边框，分屏面板蓝色边框。',
+      'ch6.layout': '布局方向',
+      'ch6.layoutdesc': '竖屏上下分屏；横屏左右分屏。',
+      'ch6.resize': '调整比例',
+      'ch6.resizedesc': '拖动分隔条，可调整主面板与分屏面板比例（20%–80%）。',
+      'ch6.focus': '切换焦点',
+      'ch6.focusdesc': '点击任意面板，边框变亮即为焦点面板，后续命令发送到该 Session。',
+      'ch6.splittab': '分屏标签栏',
+      'ch6.splittabdesc': '分屏面板有独立标签栏，支持切换标签、新建/关闭，可为分屏面板选择不同窗口。',
+      'ch6.disable': '关闭分屏',
+      'ch6.disabledesc': '再次点击 SPLIT 按钮，恢复单面板模式。',
+      'ch7.h': '窗口地图',
+      'ch7.intro': '点击 N win 按钮打开窗口地图。弹出半透明全屏遮罩，按比例还原各 iTerm2 窗口在屏幕上的实际位置和大小。',
+      'ch7.switch': '切换窗口',
+      'ch7.switchdesc': '点击窗口编号块切换，地图自动关闭；点击遮罩空白区域取消。',
+      'ch7.broadcast': '广播目标选择',
+      'ch7.broadcastdesc': '广播模式下变为多选模式，紫色高亮 = 已选为广播目标。',
+      'ch8.h': '广播模式',
+      'ch8.intro': '将同一条命令同时发送到多个 iTerm2 窗口，适合批量操作多台服务或多个项目。',
+      'ch8.s1': '1. 开启广播',
+      'ch8.s1d': '点击 CAST 按钮（默认选中所有窗口），标签栏下方出现紫色横幅。',
+      'ch8.s2': '2. 选择目标',
+      'ch8.s2d': '点击横幅右侧 EDIT，在窗口地图多选模式中勾选目标窗口。',
+      'ch8.s3': '3. 发送命令',
+      'ch8.s3d': '输入框提示符变为 >，发送后命令同时发至所有目标窗口。',
+      'ch8.s4': '4. 关闭广播',
+      'ch8.s4d': '再次点击 CAST 按钮，恢复单窗口发送。',
+      'ch9.h': '快捷操作栏',
+      'ch9.intro': '位于终端内容区下方，提供高频终端操作的一键按钮，无需展开键盘即可操作。',
+      'ch9.ctrl': '9.1 控制键',
+      'ch9.enter': '发送回车',
+      'ch9.esc': '发送 Escape 键',
+      'ch9.c': '中断当前进程（Ctrl+C）',
+      'ch9.d': '发送 EOF / 退出（Ctrl+D）',
+      'ch9.z': '挂起进程到后台（Ctrl+Z）',
+      'ch9.l': '清屏（Ctrl+L）',
+      'ch9.nav': '9.2 光标导航键',
+      'ch9.up': '按 ↑ 方向键',
+      'ch9.down': '按 ↓ 方向键',
+      'ch9.upd': '向历史前翻（更早的命令）',
+      'ch9.downd': '向历史后翻（更近的命令），回到底部恢复原始输入',
+      'ch9.tab': '发送 Tab 键（自动补全）',
+      'ch9.clip': '9.3 剪贴板操作',
+      'ch9.paste': '从手机剪贴板读取内容，直接发送到终端',
+      'ch9.copybtn': '复制',
+      'ch9.copydesc': '将当前终端内容全部复制到手机剪贴板',
+      'ch9.clear': '清除当前命令行输入（Ctrl+U）',
+      'ch9.clipnote': 'iOS 首次使用粘贴，需在弹窗中确认允许剪贴板访问权限。',
+      'ch10.h': '命令输入区',
+      'ch10.input': '10.1 命令输入框',
+      'ch10.inputnote': '输入框左侧提示符：$ 普通模式 → 当前焦点 Session；> 广播模式 → 所有选中窗口。已禁用自动纠错和首字母大写，适合终端命令输入。',
+      'ch10.send': '10.2 发送命令',
+      'ch10.sendnote': '点击右侧发送按钮，或按键盘 Return 键。发送后命令自动保存到历史（最多 100 条，存于浏览器 localStorage）。',
+      'ch10.history': '10.3 命令历史导航',
+      'ch10.up': '按 ↑ 方向键',
+      'ch10.down': '按 ↓ 方向键',
+      'ch10.kb': '10.4 切换虚拟键盘',
+      'ch10.kbnote': '点击输入区左侧的键盘图标，切换到内置虚拟键盘模式（详见第 11 节）。',
+      'ch11.h': '虚拟键盘',
+      'ch11.intro': '专为终端操作设计的内置软键盘，提供字母、数字及常用符号布局，无需依赖系统键盘。',
+      'ch11.enter': '11.1 进入 / 退出',
+      'ch11.enterdesc': '进入：点击命令输入区左侧的键盘图标。退出：点击虚拟键盘左下角的 Terminal 图标，返回命令输入框。',
+      'ch11.modes': '11.2 三种键盘布局',
+      'ch11.abc': 'ABC（字母）',
+      'ch11.abcd': '标准 QWERTY，含 SHIFT（单次大写）和 DEL',
+      'ch11.default': '默认',
+      'ch11.num': '123（符号）',
+      'ch11.numd': '数字 0–9、/ . ~ * $ | > < & ; = " \' \\ ` # 等',
+      'ch11.numswitch': '按 123 键',
+      'ch11.symd': '! @ % ^ + = ? : ( ) [ ] { } , ; " \' ` ~ \\ _ 等',
+      'ch11.symswitch': '符号模式下按 #+= 键',
+      'ch11.fnrow': '11.3 底部功能行',
+      'ch11.exit': '退出虚拟键盘，返回命令输入框',
+      'ch11.abcnum': '字母 / 符号模式切换',
+      'ch11.dash': '快速输入连字符',
+      'ch11.space': '发送空格',
+      'ch11.dot': '快速输入句点',
+      'ch11.enterbtn': '发送回车',
+      'ch12.h': '颜色语义说明',
+      'ch12.intro': '整个界面使用统一的颜色系统，便于快速识别状态：',
+      'ch12.green': '主色调：连接正常、当前选中 Tab、主面板边框、发送按钮',
+      'ch12.blue': '分屏面板标识色',
+      'ch12.purple': '广播模式标识色',
+      'ch12.yellow': '网络延迟中等、ALERT 开启状态',
+      'ch12.red': '连接断开、网络延迟差、滚动锁定开启',
+      'ch13.h': 'PWA 安装',
+      'ch13.intro': '将 remote-iterm2 添加为手机主屏幕应用，获得全屏无浏览器栏的沉浸体验：',
+      'ch13.s1': '在 iPhone Safari 中打开应用 URL（如 http://192.168.1.119:7291）',
+      'ch13.s2': '点击底部分享按钮 → 添加到主屏幕',
+      'ch13.s3': '确认名称后点击添加',
+      'ch13.callout': '安装后以全屏模式启动，自动处理 Dynamic Island / 刘海屏安全区域，屏幕常亮不锁屏。',
+      'ch14.h': '配置说明与常见问题',
+      'ch14.config': '配置文件',
+      'ch14.confignote': '在 Mac 上创建 ~/.remote-iterm2.json 可自定义行为：',
+      'ch14.tabcolor': '切换窗口时自动改变 iTerm2 标签背景色。设为 false 可保留手动颜色。',
+      'ch14.faq': '常见问题',
+      'ch14.q1': '页面一直显示 RECONNECTING？',
+      'ch14.a1': '请确认手机和 Mac 在同一 Wi-Fi 下，且 Mac 已运行 remote-iterm2（端口 7291 未被防火墙拦截）。',
+      'ch14.q2': '发送命令后没有执行？',
+      'ch14.a2': '请使用快捷操作栏的 Enter 按钮，或确保通过发送按钮提交，而非直接按系统键盘 Return。',
+      'ch14.q3': '粘贴按钮没有效果？',
+      'ch14.a3': 'iOS 首次使用需授权剪贴板访问权限，在弹窗中选择「允许粘贴」。',
+      'ch14.q4': '终端显示 ANSI 颜色转义代码？',
+      'ch14.a4': '当前版本以正则匹配进行语义着色，不解析 ANSI 转义序列，部分程序的颜色输出可能显示原始字符，属已知限制。',
+      't.item': '项目',
+      't.requirement': '要求',
+      't.color': '颜色',
+      't.meaning': '含义',
+      't.content': '代表内容',
+      't.action': '操作',
+      't.description': '说明',
+      't.step': '步骤',
+      't.function': '功能',
+      't.button': '按钮',
+      't.key': '发送字符',
+      't.effect': '效果',
+      't.mode': '模式',
+      't.switch': '切换方式',
+      't.option': '配置项',
+      't.default': '默认值',
+      't.latency': '延迟范围',
+      't.status': '网络状态',
+      't.default': '默认值',
+      't.instruction': '说明',
+      'footer': 'remote-iterm2 v1.2.5 · github.com/richardhuang/remote-iterm2 · MIT License',
+    },
+
+    en: {
+      'nav.guide': 'User Guide',
+      'nav.intro': 'Introduction',
+      'nav.ch1': 'Quick Start',
+      'nav.ch2': 'Interface Overview',
+      'nav.ch3': 'Top Status Bar',
+      'nav.ch4': 'Tab Management',
+      'nav.ch5': 'Terminal View',
+      'nav.ch6': 'Split View',
+      'nav.ch7': 'Window Map',
+      'nav.ch8': 'Broadcast Mode',
+      'nav.ch9': 'Quick Actions',
+      'nav.ch10': 'Command Input',
+      'nav.ch11': 'Virtual Keyboard',
+      'nav.ch12': 'Color Guide',
+      'nav.ch13': 'PWA Install',
+      'nav.ch14': 'Config & FAQ',
+      'hero.badge': 'Remote Control via Phone',
+      'hero.sub': 'Control your Mac\'s iTerm2 terminal from your phone\'s browser over LAN. Real-time output, syntax highlighting, multi-window management, split-screen comparison, broadcast commands — all in your pocket.',
+      'hero.term.cmd1': 'npm install -g remote-iterm2',
+      'hero.term.ready': 'remote-iterm2 is running',
+      'hero.term.url': 'Open on your phone:',
+      'hero.term.stop': 'Stop:',
+      'ch1.h': 'Quick Start',
+      'ch1.install': 'Installation',
+      'ch1.commands': 'Start / Stop / Restart',
+      'ch1.start': 'Start service',
+      'ch1.stop': 'Stop service',
+      'ch1.restart': 'Restart service',
+      'ch1.callout': 'After starting, the terminal prints the access URL, e.g. <code>http://192.168.1.119:7291</code>. Open it in your phone\'s Safari (must be on the same Wi-Fi as your Mac).',
+      'ch1.requirements': 'System Requirements',
+      'ch1.macos': 'iTerm2 must be installed on macOS',
+      'ch1.node': '>= 18',
+      'ch1.port': '7291 (HTTP + WebSocket)',
+      'ch1.mobile': 'Phone must be on the same LAN as Mac',
+      'ch2.h': 'Interface Overview',
+      'ch2.callout': 'In landscape mode, the layout automatically compresses height to optimize phone screen space.',
+      'ch3.h': 'Top Status Bar',
+      'ch3.conn': '3.1 Connection Status Indicator',
+      'ch3.connected': 'Connected to Mac',
+      'ch3.disconnected': 'Disconnected, auto-reconnecting',
+      'ch3.connnote': 'On disconnect, a semi-transparent overlay appears with RECONNECTING. Auto-reconnect runs in the background — no manual refresh needed.',
+      'ch3.ping': '3.2 Latency Display (ms)',
+      'ch3.pingnote': 'RTT measured every 5 seconds, color-coded by network quality:',
+      'ch3.good': 'Good',
+      'ch3.fair': 'Fair',
+      'ch3.poor': 'Poor',
+      'ch3.alert': '3.3 ALERT — Long Command Completion Alert',
+      'ch3.alertnote': 'Tap the 🔔 icon to toggle. When ON (yellow), the phone vibrates (two short pulses) after terminal output stops for 4+ seconds. Great for waiting on builds or downloads.',
+      'ch3.scroll': '3.4 SCROLL — Scroll Lock',
+      'ch3.scrollnote': 'Locked (red): terminal output does NOT auto-scroll; you can freely browse history. Unlocked (default): auto-scrolls to latest output.',
+      'ch3.cast': '3.5 CAST — Broadcast Mode',
+      'ch3.castnote': 'Tap the 📡 icon to toggle. When ON (purple), commands are broadcast to multiple windows simultaneously. See <a href="#ch8">Section 8</a>.',
+      'ch3.split': '3.6 SPLIT — Split View',
+      'ch3.splitnote': 'Tap the ⊟ icon to toggle. When ON (blue), the screen splits into two independent terminal panels. See <a href="#ch6">Section 6</a>. Disabled when only 1 Session exists.',
+      'ch3.win': '3.7 N win — Window Switch',
+      'ch3.winnote': 'Shows total iTerm2 window count (e.g. "2 win"). Tap to open the Window Map and switch windows. Disabled when only 1 window exists.',
+      'ch4.h': 'Tab Management Bar',
+      'ch4.switch': 'Switch tabs',
+      'ch4.switchdesc': 'Tap a tab name to switch; active tab highlighted with green underline.',
+      'ch4.rename': 'Rename tab',
+      'ch4.renamedesc': 'Long-press (~0.5s) a tab name, enter the new name, press Enter to confirm.',
+      'ch4.new': 'New tab',
+      'ch4.newdesc': 'Tap the ＋ button on the right side of the tab bar to create a new tab in iTerm2.',
+      'ch4.close': 'Close tab',
+      'ch4.closedesc': 'Tap the ✕ button on the right side of the tab bar to close the active tab. Disabled when only 1 tab remains.',
+      'ch4.callout': 'In split view mode, the top tab bar shows tabs from the focused panel\'s window.',
+      'ch5.h': 'Terminal Content Area',
+      'ch5.color': '5.1 Syntax Highlighting Rules',
+      'ch5.colornote': 'Terminal output is auto-colored by content type for quick identification:',
+      'ch5.c1': 'Bright white (bold)',
+      'ch5.c1d': 'Current command prompt line (last line)',
+      'ch5.c2': 'Cyan (bold)',
+      'ch5.c2d': 'Shell prompt (user@host $, %, # etc.)',
+      'ch5.c3': 'Red',
+      'ch5.c3d': 'Error messages (error, FAIL, fatal, ENOENT etc.)',
+      'ch5.c4': 'Yellow',
+      'ch5.c4d': 'Warning messages (warning, WARN, deprecated etc.)',
+      'ch5.c5': 'Green',
+      'ch5.c5d': 'Success messages (success, done, compiled, OK etc.)',
+      'ch5.c6': 'Purple-blue',
+      'ch5.c6d': 'File paths (/, ~/, ./ prefix) and directory tree symbols',
+      'ch5.c7': 'Light green',
+      'ch5.c7d': 'Git diff additions (+ prefix)',
+      'ch5.c8': 'Pink',
+      'ch5.c8d': 'Git diff deletions (- prefix)',
+      'ch5.c9': 'Dark gray',
+      'ch5.c9d': 'Comment lines (# prefix)',
+      'ch5.c10': 'Light gray',
+      'ch5.c10d': 'Normal output',
+      'ch5.cursor': '5.2 Cursor',
+      'ch5.cursornote': 'A blinking green block cursor █ appears at the end of the terminal (Shell prompt state only). Hidden during interactive apps (vim, htop etc.).',
+      'ch5.scroll': '5.3 Scrolling',
+      'ch5.scrollnote': 'Swipe up/down in the terminal area to browse history. With scroll lock on, new output won\'t interrupt your view.',
+      'ch6.h': 'Split View',
+      'ch6.intro': 'View two different Sessions side by side — great for comparing logs or monitoring multiple processes.',
+      'ch6.enable': 'Enable split view',
+      'ch6.enabledesc': 'Tap SPLIT (requires ≥2 Sessions). Main panel: green border. Split panel: blue border.',
+      'ch6.layout': 'Layout direction',
+      'ch6.layoutdesc': 'Portrait: vertical split (top/bottom). Landscape: horizontal split (left/right).',
+      'ch6.resize': 'Resize ratio',
+      'ch6.resizedesc': 'Drag the divider bar to adjust the ratio between panels (20%–80%).',
+      'ch6.focus': 'Switch focus',
+      'ch6.focusdesc': 'Tap any panel; its border brightens = focused. Subsequent commands go to that Session.',
+      'ch6.splittab': 'Split panel tabs',
+      'ch6.splittabdesc': 'The split panel has its own tab bar. Switch tabs, create/close tabs, or select a different window for the split panel.',
+      'ch6.disable': 'Close split view',
+      'ch6.disabledesc': 'Tap SPLIT again to return to single-panel mode.',
+      'ch7.h': 'Window Map',
+      'ch7.intro': 'Tap the N win button to open the Window Map. A full-screen overlay shows all iTerm2 windows at their true screen positions and sizes.',
+      'ch7.switch': 'Switch window',
+      'ch7.switchdesc': 'Tap a window block to switch; the map closes automatically. Tap empty area to cancel.',
+      'ch7.broadcast': 'Broadcast target selection',
+      'ch7.broadcastdesc': 'In broadcast mode, the map becomes multi-select; purple highlight = selected as broadcast target.',
+      'ch8.h': 'Broadcast Mode',
+      'ch8.intro': 'Send the same command to multiple iTerm2 windows simultaneously — perfect for batch operations across multiple servers or projects.',
+      'ch8.s1': '1. Enable broadcast',
+      'ch8.s1d': 'Tap CAST (all windows selected by default). A purple banner appears below the tab bar.',
+      'ch8.s2': '2. Select targets',
+      'ch8.s2d': 'Tap EDIT on the banner to open the Window Map in multi-select mode and check/uncheck windows.',
+      'ch8.s3': '3. Send command',
+      'ch8.s3d': 'The input prompt changes to >. Commands are sent to all selected windows after clicking send.',
+      'ch8.s4': '4. Disable broadcast',
+      'ch8.s4d': 'Tap CAST again to return to single-window mode.',
+      'ch9.h': 'Quick Action Bar',
+      'ch9.intro': 'Located below the terminal area. One-tap buttons for common terminal operations — no keyboard needed.',
+      'ch9.ctrl': '9.1 Control Keys',
+      'ch9.enter': 'Send Enter',
+      'ch9.esc': 'Send Escape',
+      'ch9.c': 'Interrupt process (Ctrl+C)',
+      'ch9.d': 'Send EOF / exit (Ctrl+D)',
+      'ch9.z': 'Suspend process (Ctrl+Z)',
+      'ch9.l': 'Clear screen (Ctrl+L)',
+      'ch9.nav': '9.2 Cursor Navigation Keys',
+      'ch9.up': 'Up arrow key',
+      'ch9.down': 'Down arrow key',
+      'ch9.upd': 'Scroll back in command history (earlier commands)',
+      'ch9.downd': 'Scroll forward (newer commands); return to bottom to restore raw input',
+      'ch9.tab': 'Send Tab (autocomplete)',
+      'ch9.clip': '9.3 Clipboard Operations',
+      'ch9.paste': 'Read from phone clipboard and send directly to terminal',
+      'ch9.copybtn': 'Copy',
+      'ch9.copydesc': 'Copy all current terminal content to phone clipboard',
+      'ch9.clear': 'Clear current input line (Ctrl+U)',
+      'ch9.clipnote': 'On iOS, you\'ll be prompted to grant clipboard access on first use.',
+      'ch10.h': 'Command Input Area',
+      'ch10.input': '10.1 Command Input Field',
+      'ch10.inputnote': 'Left prompt: $ = normal mode (focused Session); > = broadcast mode (all selected windows). Auto-correct and capitalize are disabled for terminal input.',
+      'ch10.send': '10.2 Send Command',
+      'ch10.sendnote': 'Tap the send button or press Return on your keyboard. Sent commands are auto-saved to history (up to 100, stored in browser localStorage).',
+      'ch10.history': '10.3 Command History Navigation',
+      'ch10.up': 'Press ↑',
+      'ch10.down': 'Press ↓',
+      'ch10.kb': '10.4 Switch to Virtual Keyboard',
+      'ch10.kbnote': 'Tap the keyboard icon on the left side of the input area to switch to the built-in virtual keyboard (see <a href="#ch11">Section 11</a>).',
+      'ch11.h': 'Virtual Keyboard',
+      'ch11.intro': 'Built-in soft keyboard designed for terminal operations. Provides letter, number, and symbol layouts — no system keyboard needed.',
+      'ch11.enter': '11.1 Enter / Exit',
+      'ch11.enterdesc': 'Enter: tap the keyboard icon on the left of the command input area.<br>Exit: tap the Terminal (computer) icon at the bottom-left of the virtual keyboard.',
+      'ch11.modes': '11.2 Three Keyboard Layouts',
+      'ch11.abc': 'ABC (Letters)',
+      'ch11.abcd': 'Standard QWERTY with SHIFT (single-shot caps) and DEL',
+      'ch11.default': 'Default',
+      'ch11.num': '123 (Symbols)',
+      'ch11.numd': 'Digits 0–9, / . ~ * $ | > < & ; = " \' \\ ` # etc.',
+      'ch11.numswitch': 'Tap 123',
+      'ch11.symd': '! @ % ^ + = ? : ( ) [ ] { } , ; " \' ` ~ \\ _ etc.',
+      'ch11.symswitch': 'Tap #+= while in symbol mode',
+      'ch11.fnrow': '11.3 Bottom Function Row',
+      'ch11.exit': 'Exit virtual keyboard',
+      'ch11.abcnum': 'ABC / 123 mode toggle',
+      'ch11.dash': 'Quick hyphen',
+      'ch11.space': 'Send space',
+      'ch11.dot': 'Quick period',
+      'ch11.enterbtn': 'Send Enter',
+      'ch12.h': 'Color Guide',
+      'ch12.intro': 'A consistent color system throughout the interface for quick status recognition:',
+      'ch12.green': 'Primary: connection OK, active tab, main panel border, send button',
+      'ch12.blue': 'Split panel indicator',
+      'ch12.purple': 'Broadcast mode indicator',
+      'ch12.yellow': 'Moderate latency, ALERT enabled',
+      'ch12.red': 'Disconnected, poor latency, scroll lock enabled',
+      'ch13.h': 'PWA Installation',
+      'ch13.intro': 'Add remote-iterm2 to your phone\'s home screen for a full-screen, browser-chrome-free experience:',
+      'ch13.s1': 'Open the app URL in iPhone Safari (e.g. http://192.168.1.119:7291)',
+      'ch13.s2': 'Tap the Share button → Add to Home Screen',
+      'ch13.s3': 'Confirm the name and tap Add',
+      'ch13.callout': 'Launches full-screen, handles Dynamic Island / notch safe areas, keeps screen awake.',
+      'ch14.h': 'Configuration & FAQ',
+      'ch14.config': 'Configuration File',
+      'ch14.confignote': 'Create ~/.remote-iterm2.json on your Mac to customize behavior:',
+      'ch14.tabcolor': 'Auto-change iTerm2 tab background color when switching windows on phone. Set to false to preserve manual tab colors.',
+      'ch14.faq': 'FAQ',
+      'ch14.q1': 'Page keeps showing RECONNECTING?',
+      'ch14.a1': 'Make sure your phone and Mac are on the same Wi-Fi and that remote-iterm2 is running on the Mac (port 7291 not blocked by firewall).',
+      'ch14.q2': 'Commands don\'t execute after sending?',
+      'ch14.a2': 'Use the Enter button in the Quick Actions bar, or make sure commands are submitted via the Send button rather than the system keyboard Return.',
+      'ch14.q3': 'Paste button doesn\'t work?',
+      'ch14.a3': 'On iOS, grant clipboard permission when prompted on first use.',
+      'ch14.q4': 'Terminal shows raw ANSI escape codes?',
+      'ch14.a4': 'This version uses regex-based semantic coloring instead of parsing ANSI escape sequences. Some programs\' color output may show raw codes — a known limitation.',
+      't.item': 'Item',
+      't.requirement': 'Requirement',
+      't.color': 'Color',
+      't.meaning': 'Meaning',
+      't.content': 'Content Type',
+      't.action': 'Action',
+      't.description': 'Description',
+      't.step': 'Step',
+      't.function': 'Function',
+      't.button': 'Button',
+      't.key': 'Sends',
+      't.effect': 'Effect',
+      't.mode': 'Mode',
+      't.switch': 'How to Switch',
+      't.option': 'Option',
+      't.default': 'Default',
+      't.latency': 'Latency Range',
+      't.status': 'Network Status',
+      't.instruction': 'Instruction',
+      'footer': 'remote-iterm2 v1.2.5 · github.com/richardhuang/remote-iterm2 · MIT License',
+    }
+  };
+
+  // ── Language Switcher ────────────────────────────────────────────────────
+  let currentLang = localStorage.getItem('lang') || 'zh';
+
+  function setLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('lang', lang);
+    document.body.lang = lang;
+    document.documentElement.lang = lang;
+
+    // Update lang buttons
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+
+    // Update all [data-i18n] elements
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (i18n[lang][key] !== undefined) {
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+          el.placeholder = i18n[lang][key];
+        } else {
+          el.innerHTML = i18n[lang][key];
+        }
+      }
+    });
+
+    // Update hero h1
+    const h1 = document.querySelector('.hero h1');
+    if (h1) {
+      h1.textContent = lang === 'zh' ? 'remote-iterm2' : 'remote-iterm2';
+    }
+  }
+
+  // Init
+  setLanguage(currentLang);
+
+  // Wire up lang buttons
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
+  });
+
+  // ── Mobile Sidebar ───────────────────────────────────────────────────────
+  const menuBtn = document.getElementById('menuBtn');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  function toggleSidebar(open) {
+    sidebar.classList.toggle('open', open);
+    overlay.classList.toggle('show', open);
+    menuBtn.textContent = open ? '✕' : '☰';
+  }
+
+  menuBtn.addEventListener('click', () => toggleSidebar(!sidebar.classList.contains('open')));
+  overlay.addEventListener('click', () => toggleSidebar(false));
+
+  // Close sidebar on link click
+  sidebar.querySelectorAll('.sidebar-link').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 900) toggleSidebar(false);
+    });
+  });
+
+  // ── Active Section Highlight ─────────────────────────────────────────────
+  const sections = document.querySelectorAll('.section[id], .hero[id]');
+  const navLinks = document.querySelectorAll('.sidebar-link');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { threshold: 0.2, rootMargin: '-60px 0px -60% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+
+  // ── Read Progress Bar ─────────────────────────────────────────────────────
+  const progressBar = document.getElementById('progressBar');
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+  }, { passive: true });
+  </script>
+</body>
+</html>

@@ -65,6 +65,11 @@ Create `~/.remote-iterm2.json` to customize behavior:
 - Node.js >= 18
 - Phone on the same Wi-Fi
 
+## Documentation
+
+- **[User Guide (HTML)](USER_GUIDE.html)** — Full-featured bilingual (Chinese / English) manual with dark theme, sidebar navigation, and responsive design. Also available as [PDF](remote-iterm2-用户手册.pdf).
+- **[用户手册](./USER_GUIDE.html)** — 中文双语手册，暗色主题，支持响应式布局。
+
 ## Manual Setup
 
 ```bash
