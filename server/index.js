@@ -238,7 +238,13 @@ const streamContent = async () => {
             const content = await iterm.getContent(activeSessionId);
             if (content && content !== lastContent) {
                 lastContent = content;
-                io.emit('content', { sessionId: activeSessionId, content });
+                const info = await iterm.getSessionInfo(activeSessionId);
+                const lineCount = content.split('\n').length;
+                io.emit('content', {
+                    sessionId: activeSessionId,
+                    content,
+                    meta: info ? { rows: info.rows, columns: info.columns, atShellPrompt: info.atShellPrompt, lineCount } : { lineCount }
+                });
             }
         } catch (err) {}
     }

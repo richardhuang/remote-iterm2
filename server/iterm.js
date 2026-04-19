@@ -364,6 +364,51 @@ const iterm = {
         }
     },
 
+    // Get session metadata (rows, columns, is at shell prompt)
+    getSessionInfo: async (sessionId) => {
+        if (!sessionId || sessionId === 'undefined') return null;
+        const script = `
+            tell application "iTerm"
+                try
+                    repeat with w in windows
+                        repeat with t in tabs of w
+                            repeat with s in sessions of t
+                                if ((id of s) as string) is "${sessionId}" then
+                                    set r to rows of s
+                                    set c to columns of s
+                                    try
+                                        set sp to (is at shell prompt of s) as string
+                                    on error
+                                        set sp to "missing value"
+                                    end try
+                                    return (r as string) & "," & (c as string) & "," & sp
+                                end if
+                            end repeat
+                        end repeat
+                    end repeat
+                on error
+                end try
+            end tell
+            return ""
+        `;
+        try {
+            const result = await runAppleScript(script);
+            if (!result) return null;
+            const [rowsStr, colsStr, spStr] = result.split(',');
+            let atShellPrompt = null;
+            if (spStr === 'true') atShellPrompt = true;
+            else if (spStr === 'false') atShellPrompt = false;
+            // spStr === 'missing value' or anything else → null
+            return {
+                rows: parseInt(rowsStr) || 24,
+                columns: parseInt(colsStr) || 80,
+                atShellPrompt
+            };
+        } catch (err) {
+            return null;
+        }
+    },
+
     renameSession: async (sessionId, name) => {
         if (!sessionId || sessionId === 'undefined') return;
         const safeName = name.replace(/"/g, '\\"');

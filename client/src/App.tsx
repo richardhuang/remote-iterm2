@@ -120,6 +120,31 @@ function colorizeLines(content: string): ColoredLine[] {
   return result;
 }
 
+// Determine whether to show the fake cursor based on session metadata and content
+function shouldShowCursor(
+  meta: { rows?: number; columns?: number; atShellPrompt?: boolean | null; lineCount?: number } | undefined,
+  content: string
+): boolean {
+  // Layer 1: definitive — Shell Integration knows if we're at a shell prompt
+  if (meta?.atShellPrompt === true) return true;
+  if (meta?.atShellPrompt === false) return false;
+  // Layer 2: heuristics when Shell Integration is unavailable (atShellPrompt === null/undefined)
+  const rows = meta?.rows || 24;
+  const lineCount = meta?.lineCount || content.split('\n').length;
+  // Shell with lots of scrollback — likely a scrolling prompt, show cursor
+  if (lineCount > rows * 2) return true;
+  // Content roughly fills the screen — could be a TUI app, hide cursor
+  if (lineCount >= rows * 0.8 && lineCount <= rows * 1.5) {
+    // Check for TUI-like content: many lines with similar density (box-drawing, borders, etc.)
+    const lines = content.split('\n');
+    const nonEmpty = lines.filter(l => l.trim().length > 0).length;
+    // If most lines are non-empty and fill the screen, probably a TUI
+    if (nonEmpty / lineCount > 0.7) return false;
+  }
+  // Default: show cursor (wrong cursor is better than no cursor)
+  return true;
+}
+
 export default function App() {
   const [connected, setConnected] = useState(false);
   const [state, setState] = useState<WindowState[]>([]);
@@ -164,6 +189,10 @@ export default function App() {
   const focusedPaneRef = useRef(focusedPane);
   const splitWinIdRef = useRef(splitWinId);
   const splitTabIdRef = useRef(splitTabId);
+  const metaRef = useRef<{ rows?: number; columns?: number; atShellPrompt?: boolean | null; lineCount?: number } | undefined>(undefined);
+  const [showCursor, setShowCursor] = useState(true);
+  const pendingCursorRef = useRef<boolean | null>(null);
+  const pendingCursorCountRef = useRef(0);
 
   useEffect(() => { stateRef.current = state; }, [state]);
   useEffect(() => { winIdRef.current = selectedWinId; }, [selectedWinId]);
@@ -255,7 +284,7 @@ export default function App() {
       }
     });
 
-    s.on('content', (data: { sessionId?: string; content: string }) => {
+    s.on('content', (data: { sessionId?: string; content: string; meta?: { rows?: number; columns?: number; atShellPrompt?: boolean | null; lineCount?: number } }) => {
       if (data.sessionId) {
         contentCacheRef.current.set(data.sessionId, data.content);
         // Update split pane if this is the split session
@@ -269,6 +298,19 @@ export default function App() {
         if (data.sessionId !== activeSid) return;
       }
       setContent(data.content);
+      // Store meta for cursor visibility logic
+      if (data.meta) metaRef.current = data.meta;
+      // Compute cursor visibility with debounce (2 consecutive agreeing decisions)
+      const shouldShow = shouldShowCursor(metaRef.current, data.content);
+      if (shouldShow === pendingCursorRef.current) {
+        pendingCursorCountRef.current++;
+        if (pendingCursorCountRef.current >= 2) {
+          setShowCursor(shouldShow);
+        }
+      } else {
+        pendingCursorRef.current = shouldShow;
+        pendingCursorCountRef.current = 1;
+      }
       // Track content changes for long-running command alerts
       lastContentTimeRef.current = Date.now();
       contentChangingRef.current = true;
@@ -881,7 +923,7 @@ export default function App() {
                   {i < coloredLines.length - 1 ? '\n' : ''}
                 </span>
               ))}
-              {focusedPane === 'primary' && <span className="cursor-blink" style={{ color: ACCENT }}>█</span>}
+              {focusedPane === 'primary' && showCursor && <span className="cursor-blink" style={{ color: ACCENT }}>█</span>}
             </pre>
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3">
@@ -984,7 +1026,7 @@ export default function App() {
                       {i < splitColoredLines.length - 1 ? '\n' : ''}
                     </span>
                   ))}
-                  {focusedPane === 'split' && <span className="cursor-blink" style={{ color: '#38bdf8' }}>█</span>}
+                  {focusedPane === 'split' && showCursor && <span className="cursor-blink" style={{ color: '#38bdf8' }}>█</span>}
                 </pre>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full gap-3">
