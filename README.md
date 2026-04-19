@@ -67,8 +67,8 @@ Create `~/.remote-iterm2.json` to customize behavior:
 
 ## Documentation
 
-- **[User Guide (HTML)](USER_GUIDE.html)** — Full-featured bilingual (Chinese / English) manual with dark theme, sidebar navigation, and responsive design. Also available as [PDF](remote-iterm2-用户手册.pdf).
-- **[用户手册](./USER_GUIDE.html)** — 中文双语手册，暗色主题，支持响应式布局。
+- **[User Guide](https://richardhuang.github.io/remote-iterm2/USER_GUIDE.html)** — Full-featured bilingual (Chinese / English) manual with dark theme, sidebar navigation, and responsive design. 也能当手机端入口直接使用。
+- **本地查看**：下载 [USER_GUIDE.html](./USER_GUIDE.html) 用浏览器打开即可。
 
 ## Manual Setup
 
