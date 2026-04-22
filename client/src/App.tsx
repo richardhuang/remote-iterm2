@@ -1050,6 +1050,7 @@ export default function App() {
         <QuickBtn icon={<ChevronUp className="w-3.5 h-3.5" />} onClick={() => sendSpecialKey('\\x1b[A')} color="#a78bfa" />
         <QuickBtn icon={<ChevronDown className="w-3.5 h-3.5" />} onClick={() => sendSpecialKey('\\x1b[B')} color="#a78bfa" />
         <QuickBtn label="TAB" onClick={() => sendSpecialKey('\\t')} color="#818cf8" />
+        <QuickBtn label="⇧TAB" onClick={() => sendSpecialKey('\\x1b[Z')} color="#818cf8" />
         <div className="w-px h-5 bg-zinc-800 mx-1 flex-shrink-0" />
         <QuickBtn icon={<Clipboard className="w-3.5 h-3.5" />} onClick={handlePaste} color="#38bdf8" />
         <QuickBtn icon={<Copy className="w-3.5 h-3.5" />} onClick={handleCopy} color="#71717a" />
