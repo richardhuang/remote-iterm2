@@ -84,8 +84,11 @@ const iterm = {
                                 repeat with s in sessions of t
                                     if ((id of s) as string) is "${sessionId}" then
                                         set cont to contents of s
-                                        if (count of cont) > 5000 then
-                                            return text -5000 thru -1 of cont
+                                        set paraList to paragraphs of cont
+                                        if (count of paraList) > 1000 then
+                                            set lastParas to items -1000 thru -1 of paraList
+                                            set AppleScript's text item delimiters to linefeed
+                                            return lastParas as text
                                         else
                                             return cont
                                         end if
@@ -102,8 +105,11 @@ const iterm = {
             script = `
                 tell application "iTerm"
                     set cont to contents of current session of current window
-                    if (count of cont) > 5000 then
-                        return text -5000 thru -1 of cont
+                    set paraList to paragraphs of cont
+                    if (count of paraList) > 1000 then
+                        set lastParas to items -1000 thru -1 of paraList
+                        set AppleScript's text item delimiters to linefeed
+                        return lastParas as text
                     else
                         return cont
                     end if

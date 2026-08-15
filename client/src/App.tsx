@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Plus, X, Send, Clock, ChevronUp, ChevronDown, CornerDownLeft, Trash2, Keyboard, Terminal, Lock, Unlock, Radio, Bell, Clipboard, Copy, WifiOff, Columns2 } from 'lucide-react';
+import { Plus, X, Send, Clock, ChevronUp, ChevronDown, CornerDownLeft, Trash2, Keyboard, Terminal, Lock, Unlock, Radio, Bell, Clipboard, Copy, WifiOff, Columns2, Palette } from 'lucide-react';
 
 // --- Types ---
 interface Session { id: string; name: string; }
@@ -26,7 +26,26 @@ const SOCKET_URL = window.location.port === '7291'
     : `http://${window.location.hostname}:7291`;
 
 const HISTORY_KEY = 'iterm-cmd-history';
+const COLORIZE_KEY = 'iterm-colorize';
+const BG_KEY = 'iterm-bg-theme';
 const MAX_HISTORY = 100;
+
+// Preset terminal background themes (dark, so colored text stays visible)
+const BG_THEMES = [
+  { name: 'Black', bg: '#0a0a0a' },
+  { name: 'Zinc', bg: '#18181b' },
+  { name: 'Navy', bg: '#0b1220' },
+  { name: 'Forest', bg: '#0a1a12' },
+  { name: 'Plum', bg: '#140f1f' },
+];
+
+function loadBgTheme(): string {
+  try { return localStorage.getItem(BG_KEY) || BG_THEMES[0].bg; } catch { return BG_THEMES[0].bg; }
+}
+
+function loadColorize(): boolean {
+  try { return localStorage.getItem(COLORIZE_KEY) !== '0'; } catch { return true; }
+}
 
 function loadHistory(): string[] {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
@@ -156,6 +175,8 @@ export default function App() {
   const [showMap, setShowMap] = useState(false);
   const [keyboardMode, setKeyboardMode] = useState(false);
   const [scrollLocked, setScrollLocked] = useState(false);
+  const [colorized, setColorized] = useState<boolean>(loadColorize);
+  const [bgTheme, setBgTheme] = useState<string>(loadBgTheme);
   const [broadcastMode, setBroadcastMode] = useState(false);
   const [broadcastTargets, setBroadcastTargets] = useState<Set<string>>(new Set());
   const [alertDone, setAlertDone] = useState(false);
@@ -203,8 +224,14 @@ export default function App() {
   useEffect(() => { splitTabIdRef.current = splitTabId; }, [splitTabId]);
 
   // Colorized terminal lines (memoized)
-  const coloredLines = useMemo(() => colorizeLines(content), [content]);
-  const splitColoredLines = useMemo(() => colorizeLines(splitContent), [splitContent]);
+  const coloredLines = useMemo(
+    () => colorized ? colorizeLines(content) : content.split('\n').map(l => ({ text: l, color: '#d4d4d8', bold: false })),
+    [content, colorized]
+  );
+  const splitColoredLines = useMemo(
+    () => colorized ? colorizeLines(splitContent) : splitContent.split('\n').map(l => ({ text: l, color: '#d4d4d8', bold: false })),
+    [splitContent, colorized]
+  );
 
   // --- Socket init ---
   useEffect(() => {
@@ -652,6 +679,33 @@ export default function App() {
             {scrollLocked ? <Lock className={isLandscape ? 'w-3 h-3' : 'w-3.5 h-3.5'} /> : <Unlock className={isLandscape ? 'w-3 h-3' : 'w-3.5 h-3.5'} />}
             {!isLandscape && scrollLocked && <span className="text-[7px] font-bold leading-none tracking-wider">SCROLL</span>}
           </button>
+          {/* Color highlight toggle */}
+          <button
+            onClick={() => setColorized(v => { const nv = !v; try { localStorage.setItem(COLORIZE_KEY, nv ? '1' : '0'); } catch {} return nv; })}
+            className={`flex flex-col items-center gap-0.5 rounded-md border transition-all active:scale-95 ${isLandscape ? 'p-1' : 'p-1.5'}`}
+            style={{
+              color: colorized ? '#fbbf24' : '#52525b',
+              borderColor: colorized ? '#fbbf2440' : '#3f3f46',
+              backgroundColor: colorized ? '#fbbf2415' : 'transparent',
+            }}
+          >
+            <Clipboard className={isLandscape ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
+            {!isLandscape && colorized && <span className="text-[7px] font-bold leading-none tracking-wider">COLOR</span>}
+          </button>
+          {/* Background theme toggle */}
+          <button
+            onClick={() => {
+              const idx = BG_THEMES.findIndex(t => t.bg === bgTheme);
+              const next = BG_THEMES[(idx + 1) % BG_THEMES.length];
+              setBgTheme(next.bg);
+              try { localStorage.setItem(BG_KEY, next.bg); } catch {}
+            }}
+            className={`flex flex-col items-center gap-0.5 rounded-md border transition-all active:scale-95 ${isLandscape ? 'p-1' : 'p-1.5'}`}
+            style={{ color: '#52525b', borderColor: '#3f3f46', backgroundColor: 'transparent' }}
+          >
+            <Palette className={isLandscape ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
+            {!isLandscape && <span className="text-[7px] font-bold leading-none tracking-wider">{BG_THEMES.find(t => t.bg === bgTheme)?.name.toUpperCase()}</span>}
+          </button>
           {/* Broadcast mode */}
           <button
             onClick={() => {
@@ -902,9 +956,10 @@ export default function App() {
         {/* Primary pane */}
         <div
           ref={contentRef}
-          className="overflow-auto relative min-h-0 min-w-0"
+          className="overflow-auto relative min-h-0 min-w-0 select-text cursor-text"
           onClick={() => splitMode && setFocusedPane('primary')}
           style={{
+            backgroundColor: bgTheme,
             borderLeft: `3px solid ${splitMode && focusedPane === 'primary' ? ACCENT : ACCENT + '30'}`,
             ...(splitMode
               ? isLandscape
@@ -1013,8 +1068,8 @@ export default function App() {
             </div>
             <div
               ref={splitContentRef}
-              className="flex-1 overflow-auto relative min-h-0 min-w-0"
-              style={{ borderLeft: `3px solid ${focusedPane === 'split' ? '#38bdf8' : '#38bdf830'}` }}
+              className="flex-1 overflow-auto relative min-h-0 min-w-0 select-text cursor-text"
+              style={{ backgroundColor: bgTheme, borderLeft: `3px solid ${focusedPane === 'split' ? '#38bdf8' : '#38bdf830'}` }}
             >
               {splitContent ? (
                 <pre className="p-4 text-[12px] leading-[1.7] whitespace-pre-wrap break-words">
